@@ -1,106 +1,60 @@
-// src/routes/AdminRoutes/AdminRoutes.js
-import express from "express";
-import { protect, adminProtect } from "../../middlewares/AuthMiddleware.js";
-import { adminLogin, adminSignup,changeAdminPassword } from "../../controllers/AdminController/AdminController.js";
-import {
-  getAllUsers,
-  toggleUserStatus,
-} from "../../controllers/AdminController/AdminUserController.js";
-import {
-  getAllSellers,
-  toggleSellerStatus,
-} from "../../controllers/AdminController/AdminSellerController.js";
-import {
-  createCategory,
-  updateCategory,
-  deleteCategory,
-} from "../../controllers/AdminController/CategoryController.js";
+import express from 'express';
+import { protect, adminProtect } from '../../middlewares/AuthMiddleware.js';
+import { authLimiter } from '../../middlewares/RateLimitMiddleware.js';
+import { validator } from '../../middlewares/ValidationMiddleware.js';
+import { adminLogin, adminSignup, changeAdminPassword } from '../../controllers/AdminController/AdminController.js';
+import { getAllUsers, getUserById, toggleUserStatus } from '../../controllers/AdminController/AdminUserController.js';
+import { getAllSellers, toggleSellerStatus } from '../../controllers/AdminController/AdminSellerController.js';
+import { createCategory, updateCategory, deleteCategory } from '../../controllers/AdminController/CategoryController.js';
 import {
   getSalesData,
   getUserStatistics,
   getProductStatistics,
   getAllOrdersWithSellerInfo,
-  getSellerSalesStats
-} from "../../controllers/AdminController/AnalyticsController.js";
-import { validator } from "../../middlewares/ValidationMiddleware.js";
-import { getSellerProducts } from "../../controllers/SellerController/SellerProductController.js";
-import { getAllActiveProducts } from "../../controllers/UserControllers/ProductController.js";
+  getSellerSalesStats,
+  getOrderStatusBreakdown,
+  getCategorySales,
+  getSignupGrowth,
+} from '../../controllers/AdminController/AnalyticsController.js';
+import { getAllActiveProducts } from '../../controllers/UserControllers/ProductController.js';
 
 const router = express.Router();
 
-// Admin Login
-router.post(
-  "/login",
-  validator("adminSchemas.login"),
-  adminLogin
-);
+router.post('/login', authLimiter, validator('adminSchemas.login'), adminLogin);
 
-// admin signup
-router.post(
-  "/signup",
-  validator("adminSchemas.signup"),
-  adminSignup
-);
+// Everything below needs a logged-in admin.
+router.use(protect, adminProtect);
 
-// Add to routes
-router.patch(
-  '/change-password',
-  protect,
-  adminProtect,
-  validator("adminSchemas.changePassword"),
-  changeAdminPassword
-);
+// Was public: anyone could create an admin account. Now only an admin can add another admin;
+// the first admin is created with `npm run create-admin`.
+router.post('/signup', validator('adminSchemas.signup'), adminSignup);
+router.patch('/change-password', validator('adminSchemas.changePassword'), changeAdminPassword);
 
-// User Management
-router.get("/allUsers", protect, adminProtect, getAllUsers);
-router.patch(
-  "/users/:id/toggle-status",
-  protect,
-  adminProtect,
-  toggleUserStatus
-);
+// Users
+router.get('/allUsers', getAllUsers);
+router.get('/users/:id', getUserById);
+router.patch('/users/:id/toggle-status', toggleUserStatus);
 
-// Seller Management
-router.get("/allSellers", protect, adminProtect, getAllSellers);
+// Sellers
+router.get('/allSellers', getAllSellers);
+router.patch('/sellers/:id/toggle-status', toggleSellerStatus);
 
-router.patch(
-  "/sellers/:id/toggle-status",
-  protect,
-  adminProtect,
-  toggleSellerStatus
-);
-
-// Category Management
-router.post(
-  "/add-categories",
-  protect,
-  adminProtect,
-  // validator("categorySchemas.create"),
-  createCategory
-);
-
-router.patch(
-  "/categories/:id",
-  protect,
-  adminProtect,
-  validator("categorySchemas.update"),
-  updateCategory
-);
-
-router.delete("/categories/:id", protect, adminProtect, deleteCategory);
+// Categories
+router.post('/add-categories', validator('categorySchemas.create'), createCategory);
+router.patch('/categories/:id', validator('categorySchemas.update'), updateCategory);
+router.delete('/categories/:id', deleteCategory);
 
 // Analytics
-router.get("/analytics/sales", protect, adminProtect, getSalesData);
-router.get("/analytics/users", protect, adminProtect, getUserStatistics);
-router.get("/analytics/products", protect, adminProtect, getProductStatistics);
+router.get('/analytics/sales', getSalesData);
+router.get('/analytics/users', getUserStatistics);
+router.get('/analytics/products', getProductStatistics);
+router.get('/analytics/seller-orders', getAllOrdersWithSellerInfo);
+router.get('/analytics/seller-sells', getSellerSalesStats);
+router.get('/analytics/order-status', getOrderStatusBreakdown);
+router.get('/analytics/categories', getCategorySales);
+router.get('/analytics/growth', getSignupGrowth);
 
-router.get("/analytics/seller-orders", protect, adminProtect, getAllOrdersWithSellerInfo);
-router.get("/analytics/seller-sells", protect, adminProtect, getSellerSalesStats);
-
-
-// product
-router.get("/product-list", protect, adminProtect, getAllActiveProducts);
-
+// Products
+router.get('/product-list', getAllActiveProducts);
 
 export default router;
-  

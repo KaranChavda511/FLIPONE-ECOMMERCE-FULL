@@ -1,19 +1,18 @@
-// src/routes/UserRoutes/ProductRoutes.js
 import express from 'express';
 import {
   getAllActiveProducts,
   searchProducts,
   getProductDetails,
-  getAllCategories
+  getAllCategories,
 } from '../../controllers/UserControllers/ProductController.js';
 
 const router = express.Router();
 
-// Public routes (no authentication required)
+// Public, no authentication. Fixed paths must come before '/:id'.
 router.get('/', getAllActiveProducts);
 router.get('/search', searchProducts);
-router.get('/product/:id', getProductDetails);
-// Public endpoint to view categories
 router.get('/categories', getAllCategories);
+router.get('/product/:id', getProductDetails); // old path, kept for compatibility
+router.get('/:id', getProductDetails);
 
 export default router;

@@ -1,220 +1,115 @@
-import React, { useRef } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  TextField,
-  Grid,
-  Container,
-  Paper,
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { Formik } from 'formik';
-import * as Yup from 'yup';
-import backgroundImage from '/Contact-pade-image.jpg';
-import Navbar from "../../../user/pages/navbar/Navbar";
-import Footer from '../footer/Footer';
+import { Form, Formik } from "formik";
+import * as Yup from "yup";
+import { Link } from "react-router-dom";
+import { ArrowRight, Package, Store } from "lucide-react";
+import { toast } from "@/lib/toast";
+import { Container, FormField, PageHeader } from "@/components/flipone";
+import { Button } from "@/components/ui/button";
+import { Panel } from "../../components/StoreBits";
 
+const validationSchema = Yup.object({
+  name: Yup.string().required("Name is required"),
+  email: Yup.string().email("Invalid email").required("Email is required"),
+  mobile: Yup.string()
+    .matches(/^[0-9]{10}$/, "Enter a valid 10-digit mobile number")
+    .required("Mobile number is required"),
+  message: Yup.string().required("Message is required"),
+});
+
+const SHORTCUTS = [
+  {
+    icon: Package,
+    title: "About an order",
+    text: "My orders shows each item's status from its seller, and you can cancel while an order is pending.",
+    to: "/order-history",
+    cta: "Open my orders",
+  },
+  {
+    icon: Store,
+    title: "Selling on FlipOne",
+    text: "Open a seller account to list products with photos, keep your own stock and ship your orders.",
+    to: "/selar_registrastion",
+    cta: "Open a seller account",
+  },
+];
 
 const Contact = () => {
-  const formRef = useRef(null);
-  const navigate = useNavigate();
-  const scrollToForm = () => {
-    formRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const validationSchema = Yup.object({
-    name: Yup.string().required('Name is required'),
-    email: Yup.string().email('Invalid email').required('Email is required'),
-    mobile: Yup.string()
-      .matches(/^[0-9]{10}$/, 'Enter a valid 10-digit mobile number')
-      .required('Mobile number is required'),
-    message: Yup.string().required('Message is required'),
-  });
-
-  const handleSubmit = (values, { resetForm }) => {
-    console.log(values);
-    alert('Form submitted successfully!');
+  // There is no contact endpoint on the backend yet, so the form only confirms locally.
+  const handleSubmit = (_values, { resetForm }) => {
+    toast.success("Thanks! Your message has been received.");
     resetForm();
   };
 
   return (
-    <>
-          <Navbar/>
-      
-      {/* Hero Section */}
-      <Box
-        sx={{
-          backgroundImage: `url(${backgroundImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          minHeight: '100vh',
-          width: '100%',
-          color: 'white',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          textAlign: 'center',
-          px: 2,
-        }}
-      >
-        <Typography variant="h3" fontWeight="bold" mb={2}>
-          What Our Customers Say
-        </Typography>
-        <Typography variant="h6" sx={{ mb: 3 }}>
-          Hear from shoppers and sellers who have experienced our platform.
-        </Typography>
-        <Button
-          variant="contained"
-          sx={{
-            borderRadius: 3,
-            bgcolor: 'white',
-            color: 'black',
-            '&:hover': { bgcolor: '#e0e0e0' },
-          }}
-          onClick={scrollToForm}
-        >
-          Contact Us
-        </Button>
-      </Box>
-
-      {/* Contact Form Section */}
-      <Box
-        ref={formRef}
-        sx={{
-          py: 8,
-          backgroundColor: '#f5f5f5',
-        }}
-      >
-        <Container maxWidth="sm">
-          <Paper
-            elevation={4}
-            sx={{
-              p: { xs: 3, sm: 5 },
-              borderRadius: 4,
-              backgroundColor: 'white',
-            }}
-          >
-            <Typography
-              variant="h4"
-              fontWeight="bold"
-              textAlign="center"
-              mb={4}
-              color="primary"
-            >
-              Get in Touch
-            </Typography>
-
+    <Container className="pt-5 pb-10">
+      <div className="mx-auto max-w-[1120px]">
+        <PageHeader
+          title="Contact FlipOne"
+          subtitle="Questions about the shop, an order or selling here? Send us a message."
+          className="mb-4"
+        />
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(280px,360px)] items-start gap-7">
+          <Panel title="Send a message">
             <Formik
-              initialValues={{
-                name: '',
-                email: '',
-                mobile: '',
-                message: '',
-              }}
+              initialValues={{ name: "", email: "", mobile: "", message: "" }}
               validationSchema={validationSchema}
               onSubmit={handleSubmit}
             >
-              {({
-                values,
-                touched,
-                errors,
-                handleChange,
-                handleBlur,
-                handleSubmit,
-              }) => (
-                <form onSubmit={handleSubmit} noValidate>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        variant="outlined"
-                        label="Name"
-                        name="name"
-                        value={values.name}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={touched.name && Boolean(errors.name)}
-                        helperText={touched.name && errors.name}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        variant="outlined"
-                        label="Email"
-                        name="email"
-                        type="email"
-                        value={values.email}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={touched.email && Boolean(errors.email)}
-                        helperText={touched.email && errors.email}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        variant="outlined"
-                        label="Mobile No"
-                        name="mobile"
-                        type="tel"
-                        value={values.mobile}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={touched.mobile && Boolean(errors.mobile)}
-                        helperText={touched.mobile && errors.mobile}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        variant="outlined"
-                        label="Message"
-                        name="message"
-                        multiline
-                        minRows={4}
-                        value={values.message}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={touched.message && Boolean(errors.message)}
-                        helperText={touched.message && errors.message}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        size="large"
-                        type="submit"
-                        sx={{
-                          bgcolor: '#1976d2',
-                          color: 'white',
-                          borderRadius: 3,
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          py: 1.2,
-                          '&:hover': {
-                            bgcolor: '#115293',
-                          },
-                          
-                        }}
-                        onClick={() => navigate("/")}
-                      >
-                        Submit
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </form>
+              {({ isSubmitting }) => (
+                <Form noValidate className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-[18px] pt-4 pb-[18px]">
+                  <FormField name="name" label="Name" autoComplete="name" required className="col-span-full" />
+                  <FormField name="email" label="Email" type="email" autoComplete="email" required />
+                  <FormField
+                    name="mobile"
+                    label="Mobile"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    autoComplete="tel-national"
+                    required
+                  />
+                  <FormField
+                    name="message"
+                    label="Message"
+                    as="textarea"
+                    rows={6}
+                    required
+                    className="col-span-full"
+                    placeholder="Tell us what you need help with"
+                  />
+                  <div className="col-span-full flex justify-end pt-1">
+                    <Button type="submit" disabled={isSubmitting}>
+                      Send message
+                    </Button>
+                  </div>
+                </Form>
               )}
             </Formik>
-          </Paper>
-        </Container>
-      </Box>
-      <Footer/>
-    </>
+          </Panel>
+
+          <aside aria-label="Quicker answers" className="flex flex-col gap-3">
+            <ul className="rounded-md border border-line-soft bg-surface">
+              {SHORTCUTS.map(({ icon: Icon, title, text, to, cta }) => (
+                <li key={title} className="flex gap-3 border-t border-line-soft px-4 py-3.5 first:border-t-0">
+                  <Icon className="mt-0.5 size-5 shrink-0 text-ink-2" strokeWidth={1.75} aria-hidden="true" />
+                  <div className="min-w-0">
+                    <h2 className="text-[15px] font-semibold">{title}</h2>
+                    <p className="mt-0.5 text-[14px] leading-[1.45] text-muted-foreground">{text}</p>
+                    <Link
+                      to={to}
+                      className="group/sc mt-2 inline-flex items-center gap-1 rounded-xs text-[14px] font-semibold text-ink hover:underline hover:decoration-[1.5px] hover:underline-offset-[3px]"
+                    >
+                      {cta}
+                      <ArrowRight className="size-4 transition-transform duration-150 group-hover/sc:translate-x-0.5" aria-hidden="true" />
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        </div>
+      </div>
+    </Container>
   );
 };
 

@@ -1,134 +1,154 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import Admin_Sidebar from "../pages/Admin_Sidebar";
-import Admin_Navbar from "../pages/Admin_Navbar";
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useApiGet } from "../../hooks/useApiGet";
+import { useUrlState } from "../../hooks/useUrlState";
+import { imageUrl } from "../../utils/imageUrl";
+import { capitalize, formatDate, formatInr, formatNumber } from "@/lib/format";
+import {
+  CellSub,
+  CellText,
+  DataTable,
+  DataTableFooter,
+  DataTableMessage,
+  EmptyState,
+  PortalShell,
+  Stamp,
+} from "@/components/flipone";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import Pager, { RangeText } from "../components/Pager";
+import { AnimatedRow, ErrorRow, SkeletonRows } from "../components/TableBits";
+
+const ITEMS_PER_PAGE = 10;
+const LOW_STOCK_AT = 5;
+const COLUMNS = 6;
+
+const categoryLabel = (product) => {
+  const category = typeof product.category === "string" ? product.category : product.category?.name;
+  const sub = product.subcategories?.[0];
+  return [category, sub].filter(Boolean).map(capitalize).join(" · ");
+};
+
+const StockCell = ({ stock }) => {
+  const n = Number(stock) || 0;
+  if (n <= 0) return <Stamp variant="outOfStock" />;
+  return (
+    <span className="inline-flex items-center gap-2">
+      {n <= LOW_STOCK_AT && <Stamp variant="lowStock" count={n} />}
+      {n > LOW_STOCK_AT && <span className="tabular">{formatNumber(n)}</span>}
+    </span>
+  );
+};
 
 const Product_Catalog = () => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // Number of products per page
-  const navigate = useNavigate();
-  const BASE_URL = import.meta.env.VITE_BASE_URL;
+  // ?page= keeps the page across Back/Forward, reloads and shared links.
+  const [pageParam, setCurrentPage] = useUrlState("page", 1, "number");
+  const currentPage = Math.max(1, Math.floor(pageParam));
+  // Live products (active, from active sellers), paginated server-side: { products, total, totalPages }.
+  const { data, loading, error, reload } = useApiGet("/api/admin/product-list", {
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  });
+  const products = data?.products ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(data?.totalPages ?? 1, 1);
 
+  // A link to a page past the end (fewer products now) moves to the last page instead of an empty table.
   useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        const adminToken = JSON.parse(localStorage.getItem("adminAuth"))?.token;
-        const res = await axios.get(`${BASE_URL}/api/admin/product-list`, {
-          params: {
-            page: currentPage,
-            limit: itemsPerPage, 
-          },
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        });
-        
-        
-        setProducts(res.data.products);
-        setTotalPages(res.data.totalPages); 
-      } catch (err) {
-        console.error("Failed to fetch products:", err.response?.data || err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (data && !loading && !error && currentPage > totalPages) setCurrentPage(totalPages);
+  }, [data, loading, error, currentPage, totalPages, setCurrentPage]);
 
-    fetchProducts();
-  }, [currentPage, itemsPerPage]); 
-  
   const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
   return (
-    <div className="flex">
-      <div className="w-64 fixed h-full bg-white shadow z-10">
-        <Admin_Sidebar />
-      </div>
-
-      <div className="flex-1 ml-64">
-        <div className="sticky top-0 z-20 bg-white shadow">
-          <Admin_Navbar />
-        </div>
-
-        <div className="p-6 pt-24">
-          <h2 className="text-3xl font-bold">Product Catalog</h2>
-
+    <PortalShell
+      variant="admin"
+      title="Products"
+      subtitle="Every live product from active sellers, newest first."
+    >
+      <DataTable
+        label="Products"
+        footer={
+          !loading &&
+          !error &&
+          total > 0 && (
+            <DataTableFooter>
+              <RangeText page={currentPage} perPage={ITEMS_PER_PAGE} total={total} noun="products" />
+              <Pager page={currentPage} totalPages={totalPages} onChange={handlePageChange} label="Product pages" />
+            </DataTableFooter>
+          )
+        }
+      >
+        <TableHeader>
+          <TableRow>
+            <TableHead>Product</TableHead>
+            <TableHead>Category</TableHead>
+            <TableHead>Seller</TableHead>
+            <TableHead className="text-right">MRP</TableHead>
+            <TableHead>Stock</TableHead>
+            {/* listing date from xl: below that the table must fit without a sideways scroll */}
+            <TableHead className="hidden xl:table-cell">Listed</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {loading ? (
-            <p>Loading products...</p>
+            <SkeletonRows rows={8} cols={COLUMNS} />
+          ) : error ? (
+            <ErrorRow colSpan={COLUMNS} title="Could not load products" message={error} onRetry={reload} />
+          ) : products.length === 0 ? (
+            <DataTableMessage colSpan={COLUMNS}>
+              <EmptyState
+                variant="plain"
+                illustration="products"
+                headingLevel="h3"
+                title="No live products"
+                body="Products appear here once active sellers list them."
+              />
+            </DataTableMessage>
           ) : (
-            <div className="overflow-x-auto rounded-lg shadow">
-              <table className="min-w-full text-sm text-left">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold">Product</th>
-                    <th className="px-6 py-3 font-semibold">Category</th>
-                    <th className="px-6 py-3 font-semibold">Price</th>
-                    <th className="px-6 py-3 font-semibold">Stock</th>
-                    <th className="px-6 py-3 font-semibold">Seller</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {products.map((product) => (
-                    <tr key={product._id}>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => navigate(`/product/${product._id}`)}
-                          className="text-blue-600 hover:underline"
-                        >
-                          {product.name}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4">{product.category?.name || 'N/A'}</td>
-                      <td className="px-6 py-4">₹{product.price}</td>
-                      <td className="px-6 py-4">{product.stock}</td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() =>
-                            navigate(`/seller/${product.seller?._id}`)
-                          }
-                          className="text-blue-600 hover:underline"
-                        >
-                          {product.seller?.name || 'N/A'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            products.map((product, index) => {
+              const category = categoryLabel(product);
+              return (
+                <AnimatedRow key={product._id} index={index}>
+                  <TableCell className="py-1.5">
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={imageUrl(product.images)}
+                        alt=""
+                        loading="lazy"
+                        className="h-[45px] w-9 shrink-0 rounded-[3px] bg-paper-2 object-cover"
+                      />
+                      <Link
+                        to={`/product/${product._id}`}
+                        className="block max-w-[32ch] truncate font-semibold text-ink underline-offset-[3px] hover:underline"
+                        title={product.name}
+                      >
+                        {product.name}
+                      </Link>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {category ? <Stamp variant="category">{category}</Stamp> : <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    <CellText max="22ch">{product.seller?.name || "Unknown seller"}</CellText>
+                    {product.seller?.licenseID && (
+                      <CellSub className="font-display tracking-[0.06em] tabular">{product.seller.licenseID}</CellSub>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular">{formatInr(product.price)}</TableCell>
+                  <TableCell>
+                    <StockCell stock={product.stock} />
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground tabular xl:table-cell">{formatDate(product.createdAt)}</TableCell>
+                </AnimatedRow>
+              );
+            })
           )}
-
-          {/* Pagination Controls */}
-          <div className="mt-4 flex justify-center">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-4 py-2 border rounded-md mr-2"
-            >
-              Previous
-            </button>
-            <span className="px-4 py-2">
-              {currentPage} / {totalPages}
-            </span>
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 border rounded-md ml-2"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        </TableBody>
+      </DataTable>
+    </PortalShell>
   );
 };
 

@@ -1,151 +1,130 @@
-import React from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Outlet,
+  Route,
+  RouterProvider,
+  ScrollRestoration,
+} from "react-router-dom";
 
-import Registration from "../user/auth/registration/Registration";
-import Login from "../user/auth/login/Login";
-import Mainpage from "../user/pages/mainpage/Mainpage";
-import Navbar from "../user/pages/navbar/Navbar";
-import Footer from "../user/pages/footer/Footer";
-import Contact from "../user/pages/contact/Contact";
-import Categories from "../user/pages/categories/Categories";
-import Updateprofile from "../user/pages/UpdateProfile/updateprofile";
-import OrderSuccess from "../user/pages/order/OrderSuccess";
-import Addtocart from "../user/pages/addtocart/Addtocart";
-import ProductPage from "../user/pages/productpage/ProductPage";
-
-import Admin_Login from "../admin/pages/Admin_Login";
-import Admin from "../admin/Admin";
-import User_Manage from "../admin/managements/User_Manage";
-import Seller_Manage from "../admin/managements/Seller_Manage";
-import Product_Catalog from "../admin/managements/Product_Catlog";
-import User_Details from "../admin/managements/User_Details";
-import Admin_Profile from "../admin/pages/Admin_Profile";
-
-import Selar_Registrastion from "../selar/auth/registration/Selar_Registrastion";
-import Selar_Login from "../selar/auth/login/Selar_Login";
-import Selar_Dashboard from "../selar/page/dashboard/Selar_Dashboard";
-import Selar_Navbar from "../selar/page/dashboard/Selar_Navbar";
-import Selar_Sidebar from "../selar/page/dashboard/Selar_Sidebar";
-import Selar_Products from "../selar/page/products/Selar_Products";
-import UpdateProduct from "../selar/page/updateProduct/UpdateProduct";
-import restoreUserSession from "../../utils/restoreUser";
-import Order from "../selar/page/order/Order";
+import StorefrontLayout from "../user/StorefrontLayout";
 import PrivateRouter from "./PrivateRouter";
-import Order_Manage from "../admin/managements/Order_Manage";
-import { useDispatch } from "react-redux";
-import { useEffect } from "react";
-import OrderHistoryPage from "../user/pages/order-history/OrderHistoryPage";
+import RouteFallback from "./RouteFallback";
+import AuthRedirect from "../user/auth/AuthRedirect";
 
-const Router = () => {
-  const dispatch = useDispatch();
+// Every page is its own chunk (React.lazy); StorefrontLayout stays eager so the header/footer frame paints at once.
+const Mainpage = lazy(() => import("../user/pages/mainpage/Mainpage"));
+const Contact = lazy(() => import("../user/pages/contact/Contact"));
+const Categories = lazy(() => import("../user/pages/categories/Categories"));
+const Updateprofile = lazy(
+  () => import("../user/pages/UpdateProfile/updateprofile"),
+);
+const OrderSuccess = lazy(() => import("../user/pages/order/OrderSuccess"));
+const Addtocart = lazy(() => import("../user/pages/addtocart/Addtocart"));
+const ProductPage = lazy(() => import("../user/pages/productpage/ProductPage"));
+const OrderHistoryPage = lazy(
+  () => import("../user/pages/order-history/OrderHistoryPage"),
+);
+const SavedPage = lazy(() => import("../user/pages/saved/SavedPage"));
 
-  useEffect(() => {
-    restoreUserSession(dispatch);
-  }, [dispatch])
-  return (  
-    <BrowserRouter>
-      <Routes>
-        {/* Public User Routes */}
+const Admin_Login = lazy(() => import("../admin/pages/Admin_Login"));
+const Admin = lazy(() => import("../admin/Admin"));
+const User_Manage = lazy(() => import("../admin/managements/User_Manage"));
+const Seller_Manage = lazy(() => import("../admin/managements/Seller_Manage"));
+const Product_Catalog = lazy(
+  () => import("../admin/managements/Product_Catlog"),
+);
+const Category_Manage = lazy(
+  () => import("../admin/managements/Category_Manage"),
+);
+const User_Details = lazy(() => import("../admin/managements/User_Details"));
+const Order_Manage = lazy(() => import("../admin/managements/Order_Manage"));
+const Admin_Profile = lazy(() => import("../admin/pages/Admin_Profile"));
+
+const Selar_Registrastion = lazy(
+  () => import("../selar/auth/registration/Selar_Registrastion"),
+);
+const Selar_Login = lazy(() => import("../selar/auth/login/Selar_Login"));
+const Selar_Dashboard = lazy(
+  () => import("../selar/page/dashboard/Selar_Dashboard"),
+);
+const Selar_Products = lazy(
+  () => import("../selar/page/products/Selar_Products"),
+);
+const UpdateProduct = lazy(
+  () => import("../selar/page/updateProduct/UpdateProduct"),
+);
+const Order = lazy(() => import("../selar/page/order/Order"));
+
+const user = (element) => <PrivateRouter>{element}</PrivateRouter>;
+const seller = (element) => <PrivateRouter sellerOnly>{element}</PrivateRouter>;
+const admin = (element) => <PrivateRouter adminOnly>{element}</PrivateRouter>;
+
+/**
+ * Root of every route. ScrollRestoration (data router only): a new page opens at the top, Back/Forward return
+ * to the exact scroll position you left (kept per history entry in sessionStorage), and #hash links scroll to
+ * their target. Pages that only change the query (filters, sort) opt out via preventScrollReset in useUrlState.
+ */
+function RootLayout() {
+  return (
+    <>
+      <ScrollRestoration />
+      <Suspense fallback={<RouteFallback />}>
+        <Outlet />
+      </Suspense>
+    </>
+  );
+}
+
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route element={<RootLayout />}>
+      {/* Storefront: one StoreHeader/StoreFooter frame (StorefrontLayout) around every shopper page */}
+      <Route element={<StorefrontLayout />}>
+        {/* Public shop */}
         <Route path="/" element={<Mainpage />} />
-        <Route path="/registration" element={<Registration />} />
-        <Route path="/login" element={<Login />} />
         <Route path="/mainpage" element={<Mainpage />} />
+        {/* Shopper log in / sign up are a modal (AuthDialogProvider); these URLs open it over the shop */}
+        <Route path="/registration" element={<AuthRedirect mode="signup" />} />
+        <Route path="/login" element={<AuthRedirect mode="login" />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/categories" element={<Categories />} />
-        <Route path="/navbar" element={<Navbar />} />
-        <Route path="/footer" element={<Footer />} />
-        <Route path="/addtocart" element={<Addtocart />} />
         <Route path="/product/:id" element={<ProductPage />} />
-        <Route path="/ordersuccess/:orderId" element={<OrderSuccess />} />
-        <Route path="/updateproduct" element={<UpdateProduct />} />
-        <Route path="/updateprofile" element={<Updateprofile />} />
-        <Route path="/order-history" element={<OrderHistoryPage />} />
 
+        {/* Shopper (logged in) */}
+        <Route path="/addtocart" element={user(<Addtocart />)} />
+        <Route path="/ordersuccess/:orderId" element={user(<OrderSuccess />)} />
+        <Route path="/updateprofile" element={user(<Updateprofile />)} />
+        <Route path="/order-history" element={user(<OrderHistoryPage />)} />
+        <Route path="/saved" element={user(<SavedPage />)} />
+      </Route>
 
-        {/* Protected User Routes */}
-        {/* <Route
-          path="/updateprofile"
-          element={
-            <PrivateRouter userOnly={true}>
-              <Updateprofile />
-            </PrivateRouter>
-          }
-        /> */}
+      {/* Seller */}
+      <Route path="/selar_registrastion" element={<Selar_Registrastion />} />
+      <Route path="/selar_login" element={<Selar_Login />} />
+      <Route path="/selar_dashboard" element={seller(<Selar_Dashboard />)} />
+      <Route path="/selar_Products" element={seller(<Selar_Products />)} />
+      <Route
+        path="/updateproduct/:productId"
+        element={seller(<UpdateProduct />)}
+      />
+      <Route path="/orders" element={seller(<Order />)} />
 
-        {/* Seller Routes */}
-        <Route path="/selar_registrastion" element={<Selar_Registrastion />} />
-        <Route path="/selar_navbar" element={<Selar_Navbar />} />
-        <Route path="/selar_sidebar" element={<Selar_Sidebar />} />
-        <Route path="/selar_Products" element={<Selar_Products />} />
-        <Route path="/selar_login" element={<Selar_Login />} />
-        <Route path="/selar_dashboard" element={<Selar_Dashboard />} />
-        <Route path="/updateproduct/:productId" element={<UpdateProduct />} />
-        <Route path="/orders" element={<Order />} />
+      {/* Admin */}
+      <Route path="/admin_login" element={<Admin_Login />} />
+      <Route path="/admin" element={admin(<Admin />)} />
+      <Route path="/admin_profile" element={admin(<Admin_Profile />)} />
+      <Route path="/order_manage" element={admin(<Order_Manage />)} />
+      <Route path="/user_manage" element={admin(<User_Manage />)} />
+      <Route path="/seller_manage" element={admin(<Seller_Manage />)} />
+      <Route path="/product_catlog" element={admin(<Product_Catalog />)} />
+      <Route path="/admin/categories" element={admin(<Category_Manage />)} />
+      <Route path="/admin/allUsers/:id" element={admin(<User_Details />)} />
+    </Route>,
+  ),
+);
 
-
-        {/* Public Admin Route */}
-        <Route path="/admin_login" element={<Admin_Login />} />
-
-        {/* Protected Admin Routes */}
-        <Route
-          path="/admin"
-          element={
-            <PrivateRouter adminOnly={true}>
-              <Admin />
-            </PrivateRouter>
-          }
-        />
-        <Route
-          path="/admin_profile"
-          element={
-            <PrivateRouter adminOnly={true}>
-              <Admin_Profile />
-            </PrivateRouter>
-          }
-        />
-        <Route
-          path="/order_manage"
-          element={
-            <PrivateRouter adminOnly={true}>
-              <Order_Manage />
-            </PrivateRouter>
-          }
-        />
-        <Route
-          path="/user_manage"
-          element={
-            <PrivateRouter adminOnly={true}>
-              <User_Manage />
-            </PrivateRouter>
-          }
-        />
-        <Route
-          path="/seller_manage"
-          element={
-            <PrivateRouter adminOnly={true}>
-              <Seller_Manage />
-            </PrivateRouter>
-          }
-        />
-        <Route
-          path="/product_catlog"
-          element={
-            <PrivateRouter adminOnly={true}>
-              <Product_Catalog />
-            </PrivateRouter>
-          }
-        />
-        <Route
-          path="/admin/allUsers/:id"
-          element={
-            <PrivateRouter adminOnly={true}>
-              <User_Details />
-            </PrivateRouter>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
-  );
-};
+const Router = () => <RouterProvider router={router} />;
 
 export default Router;

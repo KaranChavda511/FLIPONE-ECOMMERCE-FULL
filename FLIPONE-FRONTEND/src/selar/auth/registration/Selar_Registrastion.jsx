@@ -1,188 +1,72 @@
-import React, { useState } from 'react';
-import { Formik } from 'formik';
-import * as Yup from 'yup';
-import {
-  Container,
-  TextField,
-  Button,
-  Typography,
-  Card,
-  Grid,
-  IconButton,
-  InputAdornment
-} from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { Link, useNavigate } from 'react-router-dom';
-import backgroundImage from '../../../../public/background-image-reg-loin.jpg';
-import { ToastContainer, toast } from 'react-toastify';
-import axios from 'axios';
-import Navbar from "../../../user/pages/navbar/Navbar";
+import { Formik, Form } from "formik";
+import * as Yup from "yup";
+import { Link, useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/lib/toast";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/flipone";
+import apiClient, { apiErrorMessage } from "../../../config/apiClient";
+import { emailSchema, PASSWORD_HINT, strongPasswordSchema } from "../../../utils/validation";
+import SellerAuthLayout from "../SellerAuthLayout";
+import PasswordField from "../PasswordField";
 
 const validationSchema = Yup.object({
-  name: Yup.string()
-    .max(35, 'Must be 35 characters or less')
-    .required('Enter your name'),
-  email: Yup.string()
-    .max(30, 'Must be 30 characters or less')
-    .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter a valid email address")
-    .required('Enter your Email'),
-  password: Yup.string()
-    .length(8, 'Must be exactly 8 characters')
-    .matches(
-      /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/,
-      "Password must contain at least one uppercase letter, one number, and one special character"
-    )
-    .required('Enter your Password'),
+  name: Yup.string().trim().min(3, "At least 3 characters").max(35, "Must be 35 characters or less").required("Enter your name"),
+  email: emailSchema,
+  password: strongPasswordSchema,
 });
 
 const Selar_Registrastion = () => {
-  const [showPassword, setShowPassword] = useState(false);
-  const BASE_URL = import.meta.env.VITE_BASE_URL;
-
   const navigate = useNavigate();
-
-  const handleTogglePassword = () => {
-    setShowPassword(!showPassword);
-  };
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      const response = await axios.post(`${BASE_URL}/api/seller/signup`, values);
-      toast.success("Registration successful!");
-      console.log("Registration Response:", response.data);
-
-      // Optionally save the token or user data if needed
-      // localStorage.setItem("sellerAuth", JSON.stringify(response.data));
-
-      setTimeout(() => {
-        navigate("/selar_login");
-      }, 2000);
+      await apiClient.post("/api/seller/signup", values);
+      toast.success("Registration successful! Please log in.");
+      navigate("/selar_login");
     } catch (error) {
-      console.error("Registration failed:", error.response?.data || error.message);
-      toast.error(error.response?.data?.message || "Registration failed");
+      toast.error(apiErrorMessage(error, "Registration failed"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <>
-      <Navbar />
-      <ToastContainer />
-
-      <div
-        style={{
-          backgroundImage: `url(${backgroundImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          width: '100%',
-          minHeight: '100vh',
-          height: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        <Container maxWidth="sm">
-          <Card
-            sx={{
-              p: 4,
-              boxShadow: 6,
-              borderRadius: 3,
-              backgroundColor: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(10px)',
-            }}
+    <SellerAuthLayout
+      title="Open a seller account"
+      subtitle="Your shop name is printed on every product tag you list."
+      footer={
+        <p>
+          Already selling on FlipOne?{" "}
+          <Link
+            to="/selar_login"
+            className="rounded-sm font-semibold text-ink underline decoration-line-mid decoration-[1.5px] underline-offset-[3px] hover:decoration-ink"
           >
-            <Typography variant="h4" align="center" gutterBottom fontWeight="bold">
-              Seller Registration
-            </Typography>
-            <Formik
-              initialValues={{
-                name: '',
-                email: '',
-                password: '',
-              }}
-              validationSchema={validationSchema}
-              onSubmit={handleSubmit}
-              validateOnBlur={false}
-              validateOnChange={false}
-            >
-              {({ touched, errors, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
-                <form onSubmit={handleSubmit}>
-                  <Grid container spacing={2}>
-                    <TextField
-                      fullWidth
-                      label="Name"
-                      name="name"
-                      variant="outlined"
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.name && Boolean(errors.name)}
-                      helperText={touched.name && errors.name}
-                    />
-
-                    <TextField
-                      fullWidth
-                      label="Email"
-                      name="email"
-                      variant="outlined"
-                      type="email"
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.email && Boolean(errors.email)}
-                      helperText={touched.email && errors.email}
-                    />
-
-                    <TextField
-                      fullWidth
-                      label="Password"
-                      name="password"
-                      variant="outlined"
-                      type={showPassword ? 'text' : 'password'}
-                      inputProps={{ maxLength: 8 }}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.password && Boolean(errors.password)}
-                      helperText={touched.password && errors.password}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton onClick={handleTogglePassword} edge="end">
-                              {showPassword ? <VisibilityOff /> : <Visibility />}
-                            </IconButton>
-                          </InputAdornment>
-                        )
-                      }}
-                    />
-
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      size="large"
-                      type="submit"
-                      disabled={isSubmitting}
-                      sx={{ mt: 2 }}
-                    >
-                      {isSubmitting ? "Registering..." : "Register"}
-                    </Button>
-                  </Grid>
-
-                  <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-                    Already have an account?{' '}
-                    <Link to="/Selar_Login" style={{ textDecoration: 'none', color: '#1976D2', fontWeight: 'bold' }}>
-                      Login Now
-                    </Link>
-                  </Typography>
-                </form>
-              )}
-            </Formik>
-          </Card>
-        </Container>
-      </div>
-    </>
+            Log in
+          </Link>
+        </p>
+      }
+    >
+      <Formik
+        initialValues={{ name: "", email: "", password: "" }}
+        validationSchema={validationSchema}
+        onSubmit={handleSubmit}
+        validateOnBlur={false}
+        validateOnChange={false}
+      >
+        {({ isSubmitting }) => (
+          <Form noValidate className="grid gap-4">
+            <FormField name="name" label="Shop or seller name" autoComplete="organization" required hint="3 to 35 characters" />
+            <FormField name="email" label="Email" type="email" autoComplete="email" required />
+            <PasswordField name="password" label="Password" autoComplete="new-password" hint={PASSWORD_HINT} />
+            <Button type="submit" size="lg" disabled={isSubmitting} className="mt-2 w-full">
+              {isSubmitting && <Loader2 className="animate-spin" aria-hidden="true" />}
+              {isSubmitting ? "Creating account…" : "Create seller account"}
+            </Button>
+          </Form>
+        )}
+      </Formik>
+    </SellerAuthLayout>
   );
 };
 

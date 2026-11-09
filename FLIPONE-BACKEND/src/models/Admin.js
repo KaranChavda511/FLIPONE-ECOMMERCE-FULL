@@ -1,41 +1,18 @@
-
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import passwordPlugin from './plugins/passwordPlugin.js';
 
-const adminSchema = mongoose.Schema(
+const adminSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true },
-    role: { type: String, default: 'admin' },
-    isActive: { type: Boolean, default: true } 
-
-    
+    role: { type: String, enum: ['admin'], default: 'admin' },
+    isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-
-// password hasshing before saving
-adminSchema.pre("save", async function (next) {
-  try{
-  if (!this.isModified('password')) return next();
-
-  // this.password = bcrypt.hash(this.password, 10);
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-} catch (error) {
-  next(error);
-}
-});
-adminSchema.methods.comparePassword  = async function (enteredPassword) {
-  try{
-  return await bcrypt.compare(enteredPassword, this.password);
-} catch (error) {
-  throw new Error('Password comparison failed');
-}
-};
+adminSchema.plugin(passwordPlugin);
 
 const Admin = mongoose.model('Admin', adminSchema);
 export default Admin;

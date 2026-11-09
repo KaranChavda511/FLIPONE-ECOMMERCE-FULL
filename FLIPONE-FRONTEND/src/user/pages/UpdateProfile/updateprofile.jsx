@@ -1,138 +1,208 @@
-import React, { useState, useEffect } from "react";
-import { Formik } from "formik";
+import { useEffect, useRef, useState } from "react";
+import { Form, Formik } from "formik";
 import * as Yup from "yup";
-import axios from "axios";
-import {
-  Container,
-  TextField,
-  Button,
-  Typography,
-  Card,
-  Grid,
-} from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import Navbar from "../Navbar/navbar";
-import backgroundImage from "/background-image-reg-loin.jpg";
-import { useSelector } from "react-redux";
+import { ImageUp, KeyRound } from "lucide-react";
+import { toast } from "@/lib/toast";
+import { Container, FieldHint, FormField, PageHeader } from "@/components/flipone";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import apiClient, { apiErrorMessage } from "../../../config/apiClient";
+import { useApiGet } from "../../../hooks/useApiGet";
+import { imageUrl } from "../../../utils/imageUrl";
+import { PASSWORD_HINT, strongPasswordSchema } from "../../../utils/validation";
+import PasswordField from "../../components/PasswordField";
+import { LoadError, Panel } from "../../components/StoreBits";
 
-// Validation schema
+// Email is shown read-only (the backend treats it as immutable), so it is not validated here.
 const validationSchema = Yup.object({
-  name: Yup.string().max(35, "Must be 35 characters or less").required("Enter your name"),
-  email: Yup.string()
-      .max(30)
-      .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter valid email")
-      .required("Enter your Email"),
+  name: Yup.string().trim().min(3, "At least 3 characters").max(35, "Must be 35 characters or less").required("Enter your name"),
   mobile: Yup.string().matches(/^[0-9]{10}$/, "Enter a valid 10-digit number").required("Enter your Mobile Number"),
-  address: Yup.string().required("Enter your address"),
+  // Optional: checkout asks for the delivery address of each order.
+  address: Yup.string().trim().max(500, "Keep it under 500 characters"),
 });
+
+// Mirrors the backend's changePassword schema (old password, strong new password, matching confirmation).
+const passwordSchema = Yup.object({
+  oldPassword: Yup.string().required("Enter your current password"),
+  newPassword: strongPasswordSchema
+    .required("Enter a new password")
+    .notOneOf([Yup.ref("oldPassword")], "New password must be different from the old password"),
+  confirmPassword: Yup.string()
+    .oneOf([Yup.ref("newPassword")], "Passwords do not match")
+    .required("Confirm the new password"),
+});
+
+// Same limits as the backend upload (multer: JPEG/PNG/WEBP, 5 MB).
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+
+const initials = (name = "") =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || "?";
+
+/** Profile picture: current photo, choose a file (checked against the server's limits), preview, upload. */
+function PhotoPanel({ user, onUploaded }) {
+  const inputRef = useRef(null);
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
+
+  const reset = () => {
+    setFile(null);
+    setPreview(null);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const choose = (event) => {
+    const picked = event.target.files?.[0];
+    if (!picked) return;
+    if (!PHOTO_TYPES.includes(picked.type)) {
+      toast.error("Choose a JPEG, PNG or WEBP image.");
+      reset();
+      return;
+    }
+    if (picked.size > PHOTO_MAX_BYTES) {
+      toast.error("That image is larger than 5 MB.");
+      reset();
+      return;
+    }
+    setFile(picked);
+    setPreview(URL.createObjectURL(picked));
+  };
+
+  const upload = async () => {
+    if (!file) return;
+    const body = new FormData();
+    body.append("profileImage", file);
+    setUploading(true);
+    try {
+      const { data } = await apiClient.patch("/api/user/profile/picture", body);
+      onUploaded(data?.imageUrl);
+      toast.success("Profile picture updated");
+      reset();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not upload the picture"));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const current = preview ?? (user?.profilePic ? imageUrl(user.profilePic) : undefined);
+
+  return (
+    <Panel title="Photo" bodyClassName="flex flex-col items-center gap-4 px-[18px] py-5">
+      <Avatar className="size-32 border border-line-soft">
+        {current && <AvatarImage src={current} alt={preview ? "New photo preview" : "Your profile photo"} className="object-cover" />}
+        <AvatarFallback className="text-[40px]">{initials(user?.name)}</AvatarFallback>
+      </Avatar>
+      <div className="text-center">
+        <p className="text-[15px] font-semibold">{user?.name}</p>
+        <p className="text-[13px] text-muted-foreground">{user?.email}</p>
+      </div>
+      <input
+        ref={inputRef}
+        id="profile-photo"
+        type="file"
+        accept={PHOTO_TYPES.join(",")}
+        onChange={choose}
+        className="sr-only"
+        tabIndex={-1}
+        aria-label="Profile photo file"
+        aria-describedby="profile-photo-hint"
+      />
+      <div className="flex w-full flex-col gap-2">
+        {file ? (
+          <>
+            <Button variant="ink" onClick={upload} disabled={uploading}>
+              <ImageUp aria-hidden="true" />
+              {uploading ? "Uploading…" : "Upload photo"}
+            </Button>
+            <Button variant="ghost" onClick={reset} disabled={uploading}>
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <Button variant="outline" onClick={() => inputRef.current?.click()}>
+            <ImageUp aria-hidden="true" />
+            Choose a photo
+          </Button>
+        )}
+        <FieldHint id="profile-photo-hint" className="text-center">
+          {file ? file.name : "JPEG, PNG or WEBP, up to 5 MB."}
+        </FieldHint>
+      </div>
+    </Panel>
+  );
+}
+
+function ProfileSkeleton() {
+  return (
+    <div role="status" aria-live="polite" className="grid grid-cols-[280px_minmax(0,1fr)] gap-6">
+      <span className="sr-only">Loading profile…</span>
+      <Skeleton aria-hidden="true" className="h-80" />
+      <div aria-hidden="true" className="flex flex-col gap-4">
+        <Skeleton className="h-72" />
+        <Skeleton className="h-56" />
+      </div>
+    </div>
+  );
+}
 
 const UpdateProfile = () => {
   const navigate = useNavigate();
+  const { data, loading, error, reload, setData } = useApiGet("/api/user/profile");
+  const userDetails = data?.user;
 
-  // Fetch token from localStorage if not in Redux
-  const token = useSelector((state) => state.auth.token) || localStorage.getItem("token");
-  const BASE_URL = import.meta.env.VITE_BASE_URL;
-
-  const [userDetails, setUserDetails] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!token) {
-        toast.error("No token found, please log in again.");
-        navigate("/login");
-        return;
-      }
-
-      try {
-        // Log the token to ensure it's valid
-        console.log("Token:", token);
-
-        const response = await axios.get(`${BASE_URL}/api/user/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setUserDetails(response.data.user);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching user data:", error.response?.data || error.message);
-        toast.error("Failed to fetch user data. Please login again.");
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, [token, BASE_URL, navigate]);
-
-  const handleSubmit = async (values, { setSubmitting }) => {
+  const handleSubmit = async ({ name, mobile, address }, { setSubmitting }) => {
     try {
-      const { name, mobile, address } = values;
-
-      await axios.patch(
-        `${BASE_URL}/api/user/profile`,
-        { name,   mobile, address },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+      await apiClient.patch("/api/user/profile", { name, mobile, address });
       toast.success("Profile updated successfully!");
-      setTimeout(() => {
-        navigate("/mainpage");
-      }, 2000);
-    } catch (error) {
-      console.error("Update failed:", error.response?.data || error.message);
-      toast.error(error.response?.data?.message || "Update failed");
+      navigate("/mainpage");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Update failed"));
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
-    return <Typography align="center">Loading profile...</Typography>;
-  }
+  const handlePassword = async (values, { setSubmitting, resetForm }) => {
+    try {
+      await apiClient.patch("/api/user/profile/password", values);
+      toast.success("Password changed");
+      resetForm();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not change the password"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-  return (
-    <>
-      <Navbar />
-      <ToastContainer position="top-right" autoClose={3000} />
-      <div
-        style={{
-          backgroundImage: `url(${backgroundImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          width: "100%",
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-        }}
-      >
-        <Container maxWidth="sm">
-          {/* <Card
-            sx={{
-              p: 4,
-              boxShadow: 6,
-              borderRadius: 3,
-              backgroundColor: "rgba(255, 255, 255, 0.85)",
-              backdropFilter: "blur(10px)",
-            }}
-          > */}
-            <Typography variant="h4" align="center" gutterBottom fontWeight="bold">
-              Update Profile
-            </Typography>
+  const setProfilePic = (url) => {
+    if (url) setData((prev) => ({ ...(prev ?? {}), user: { ...(prev?.user ?? {}), profilePic: url } }));
+  };
 
+  let body;
+  if (loading) body = <ProfileSkeleton />;
+  else if (error) body = <LoadError title="Could not load your profile" message={error} onRetry={reload} />;
+  else
+    body = (
+      <div className="grid grid-cols-[260px_minmax(0,1fr)] items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <PhotoPanel user={userDetails} onUploaded={setProfilePic} />
+
+        <div className="flex min-w-0 flex-col gap-5">
+          <Panel title="Details" description="Used on your orders">
             <Formik
               initialValues={{
                 name: userDetails?.name ?? "",
-                email: userDetails ?. email ?? "" ,
+                email: userDetails?.email ?? "",
                 mobile: userDetails?.mobile ?? "",
                 address: userDetails?.address ?? "",
               }}
@@ -142,98 +212,63 @@ const UpdateProfile = () => {
               validateOnBlur={false}
               validateOnChange={false}
             >
-              {({
-                values,
-                errors,
-                touched,
-                handleChange,
-                handleBlur,
-                handleSubmit,
-                isSubmitting,
-              }) => (
-                <form onSubmit={handleSubmit}>
-                  <Grid container direction="column" spacing={2}>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Name"
-                        name="name"
-                        variant="outlined"
-                        value={values.name}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={Boolean(errors.name && touched.name)}
-                        helperText={errors.name && touched.name && errors.name}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Email"
-                        name="email"
-                        disabled
-                        variant="outlined"
-                        value={values.email}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={Boolean(errors.email && touched.email)}
-                        helperText={errors.email && touched.email && errors.email}
-                      />
-                    </Grid>
-
-
-
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Mobile"
-                        name="mobile"
-                        variant="outlined"
-                        value={values.mobile}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={Boolean(errors.mobile && touched.mobile)}
-                        helperText={errors.mobile && touched.mobile && errors.mobile}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Address"
-                        name="address"
-                        variant="outlined"
-                        value={values.address}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={Boolean(errors.address && touched.address)}
-                        helperText={errors.address && touched.address && errors.address}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        fullWidth
-                        size="large"
-                        type="submit"
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? "Updating..." : "Update"}
-                      </Button>
-                    </Grid>
-
-
-                  </Grid>
-                </form>
+              {({ isSubmitting }) => (
+                <Form noValidate className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-[18px] pt-4 pb-[18px]">
+                  <FormField name="name" label="Full name" autoComplete="name" required />
+                  <FormField name="email" label="Email" type="email" disabled hint="Your email can't be changed." />
+                  <FormField
+                    name="mobile"
+                    label="Mobile"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    autoComplete="tel-national"
+                    className="[&_input]:tabular"
+                    required
+                  />
+                  <FormField name="address" label="Address (optional)" autoComplete="street-address" className="col-span-full" />
+                  <div className="col-span-full flex justify-end pt-1">
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Saving…" : "Save changes"}
+                    </Button>
+                  </div>
+                </Form>
               )}
             </Formik>
-          
-        </Container>
+          </Panel>
+
+          <Panel title="Password" description="You stay logged in after changing it">
+            <Formik
+              initialValues={{ oldPassword: "", newPassword: "", confirmPassword: "" }}
+              validationSchema={passwordSchema}
+              onSubmit={handlePassword}
+            >
+              {({ isSubmitting }) => (
+                <Form noValidate className="grid grid-cols-2 gap-x-4 gap-y-3.5 px-[18px] pt-4 pb-[18px]">
+                  <PasswordField name="oldPassword" label="Current password" autoComplete="current-password" required className="col-span-full max-w-[calc(50%-0.5rem)]" />
+                  <PasswordField name="newPassword" label="New password" autoComplete="new-password" hint={PASSWORD_HINT} required />
+                  <PasswordField name="confirmPassword" label="Confirm new password" autoComplete="new-password" required />
+                  <div className="col-span-full flex justify-end pt-1">
+                    <Button type="submit" variant="ink" disabled={isSubmitting}>
+                      <KeyRound aria-hidden="true" />
+                      {isSubmitting ? "Changing…" : "Change password"}
+                    </Button>
+                  </div>
+                </Form>
+              )}
+            </Formik>
+          </Panel>
+        </div>
       </div>
-    </>
+    );
+
+  return (
+    <Container className="pt-5 pb-10">
+      <div className="mx-auto max-w-[1120px]">
+        <PageHeader title="Your profile" className="mb-4" />
+        {body}
+      </div>
+    </Container>
   );
 };
 

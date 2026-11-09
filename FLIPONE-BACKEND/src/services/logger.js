@@ -1,81 +1,68 @@
 // src/services/logger.js
-import winston from "winston";
-import "winston-daily-rotate-file";
-import path from "path";
-import { fileURLToPath } from "url";
-import fs from "fs";
+import path from 'node:path';
+import fs from 'node:fs';
+import winston from 'winston';
+import 'winston-daily-rotate-file';
 
-// Fix __dirname in ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const isProduction = process.env.NODE_ENV === 'production';
+const isTest = process.env.NODE_ENV === 'test';
 
-// Logs folder absolute path (inside project root)
-const logDirectory = path.resolve(__dirname, "../../logs");
+// logs/ at the project root (import.meta.dirname is native since Node 20.11).
+const logDirectory = path.resolve(import.meta.dirname, '../../logs');
 
-// Ensure logs folder exists
-if (!fs.existsSync(logDirectory)) {
-  fs.mkdirSync(logDirectory, { recursive: true }); // Create logs folder if missing
-}
-
-// Define log file paths
-const errorLogPath = path.join(logDirectory, "error.log");
-const combinedLogPath = path.join(logDirectory, "combined.log");
-
-// Winston formatting
 const { combine, timestamp, errors, printf, json, colorize } = winston.format;
 
-// Development format (colorized logs)
 const devFormat = combine(
   colorize(),
-  timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+  timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   errors({ stack: true }),
-  printf(({ timestamp, level, message, stack, ...meta }) => {
-    return `${timestamp} ${level}: ${stack || message} ${
-      Object.keys(meta).length ? JSON.stringify(meta) : ""
-    }`;
-  })
+  printf(({ timestamp, level, message, stack, label, service: _service, ...meta }) => {
+    const tag = label ? ` [${label}]` : '';
+    const extra = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+    return `${timestamp} ${level}${tag}: ${stack || message}${extra}`;
+  }),
 );
 
-// Production format (JSON structured logs)
 const prodFormat = combine(timestamp(), errors({ stack: true }), json());
 
-// Create logger
-const logger = winston.createLogger({
-  level: process.env.NODE_ENV === "production" ? "info" : "debug",
-  format: process.env.NODE_ENV === "production" ? prodFormat : devFormat,
-  defaultMeta: { service: "user-service" },
-  transports: [
-    // File logs
-    new winston.transports.File({ filename: errorLogPath, level: "error" }),
-    new winston.transports.File({ filename: combinedLogPath }),
+const transports = [];
 
-    // Daily rotating logs
+if (!isTest) {
+  fs.mkdirSync(logDirectory, { recursive: true });
+  // Daily rotated files only (the old fixed error.log/combined.log grew forever and duplicated these).
+  transports.push(
     new winston.transports.DailyRotateFile({
-      filename: path.join(logDirectory, "%DATE%-combined.log"),
-      datePattern: "YYYY-MM-DD",
-      level: "info",
+      filename: path.join(logDirectory, '%DATE%-combined.log'),
+      datePattern: 'YYYY-MM-DD',
+      level: 'info',
       zippedArchive: true,
-      maxSize: "20m",
-      maxFiles: "14d",
+      maxSize: '20m',
+      maxFiles: '14d',
+      format: prodFormat,
     }),
     new winston.transports.DailyRotateFile({
-      filename: path.join(logDirectory, "%DATE%-error.log"),
-      datePattern: "YYYY-MM-DD",
-      level: "error",
+      filename: path.join(logDirectory, '%DATE%-error.log'),
+      datePattern: 'YYYY-MM-DD',
+      level: 'error',
       zippedArchive: true,
-      maxSize: "20m",
-      maxFiles: "14d",
+      maxSize: '20m',
+      maxFiles: '14d',
+      format: prodFormat,
     }),
-  ],
-});
-
-// Log to console in development mode
-if (process.env.NODE_ENV !== "production") {
-  logger.add(
-    new winston.transports.Console({
-      format: devFormat,
-    })
   );
 }
+
+transports.push(
+  new winston.transports.Console({
+    format: isProduction ? prodFormat : devFormat,
+    silent: isTest,
+  }),
+);
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || (isProduction ? 'http' : 'debug'),
+  defaultMeta: { service: 'flipone-backend' },
+  transports,
+});
 
 export default logger;

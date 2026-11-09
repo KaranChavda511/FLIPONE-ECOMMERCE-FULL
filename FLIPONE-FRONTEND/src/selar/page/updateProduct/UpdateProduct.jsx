@@ -1,217 +1,216 @@
-import React, { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
-import axios from "axios";
-import Selar_Sidebar from "../dashboard/Selar_Sidebar";
-import Selar_Navbar from "../dashboard/Selar_Navbar";
-import { FaPlus } from "react-icons/fa";
-import { useNavigate, useParams } from "react-router-dom";
+import { Formik, Form } from "formik";
+import { ArrowLeft, Loader2, Save, Upload } from "lucide-react";
+import { toast } from "@/lib/toast";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, PortalShell, TagCard } from "@/components/flipone";
+import apiClient, { apiErrorMessage } from "../../../config/apiClient";
+import { useApiGet } from "../../../hooks/useApiGet";
+import ImagePicker from "../../components/ImagePicker";
+import { Panel, PanelError } from "../../components/Panel";
+import ProductFields from "../../components/ProductFields";
+import { categoryList, LOW_STOCK_AT, MAX_IMAGES, productFormData, productSchema } from "../../lib/seller";
+
+const FORM_ID = "update-product-form";
+
+const imagesFormData = (files) => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("images", file));
+  return formData;
+};
+
+const BackButton = () => (
+  <Button asChild variant="ghost" size="sm">
+    <Link to="/selar_Products">
+      <ArrowLeft aria-hidden="true" />
+      Back to products
+    </Link>
+  </Button>
+);
 
 const UpdateProduct = () => {
   const { productId } = useParams();
-  const token = useSelector((state) => state.seller.sellerInfo.token);
   const navigate = useNavigate();
-  const BASE_URL = import.meta.env.VITE_BASE_URL;
+  const sellerName = useSelector((state) => state.seller?.sellerInfo?.name);
+  const productPath = `/api/seller/products/${encodeURIComponent(productId)}`;
+  const { data, loading, error, reload, setData } = useApiGet(productPath);
+  const categoriesReq = useApiGet("/api/product/categories");
+  const categories = categoryList(categoriesReq.data);
+  const product = data?.product;
 
+  const [newImages, setNewImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const currentImages = useMemo(() => product?.images ?? [], [product]);
 
-  const [product, setProduct] = useState({
-    name: "",
-    price: "",
-    stock: "",
-    category: "",
-    subcategory: "",
-    description: "",
-    images: [],
-  });
-  const [loading, setLoading] = useState(true);
-  const [newProduct, setNewProduct] = useState({ ...product });
-  const [images, setImages] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  
-  useEffect(() => {
-    if (productId) {
-      fetchProduct();
-    } else {
-      alert("Product not found");
-    }
-  }, [productId]);
+  const initialValues = useMemo(
+    () => ({
+      name: product?.name ?? "",
+      description: product?.description ?? "",
+      price: product?.price ?? "",
+      stock: product?.stock ?? "",
+      category: product?.category ?? "",
+      subcategories: (product?.subcategories ?? []).map((s) => String(s).toLowerCase()),
+    }),
+    [product]
+  );
 
-  const fetchProduct = async () => {
+  /** PATCH /api/seller/products/:id/images appends the files to the product's photos. */
+  const uploadImages = async () => {
+    const { data: res } = await apiClient.patch(`${productPath}/images`, imagesFormData(newImages));
+    setData((prev) => (prev?.product ? { ...prev, product: { ...prev.product, images: res.images ?? prev.product.images } } : prev));
+    setNewImages([]);
+  };
+
+  const handleUploadOnly = async () => {
+    setUploading(true);
     try {
-      const response = await axios.get(`${BASE_URL}/api/seller/products/${productId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setProduct(response.data.products);
-      setNewProduct(response.data.products);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching product:", error);
-      setLoading(false);
-      alert("Failed to load product data.");
+      await uploadImages();
+      toast.success("Photos added");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to upload photos"));
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setNewProduct({
-      ...newProduct,
-      [name]: value,
-    });
-  };
-
-  const handleImageUpload = (e) => {
-    setImages(e.target.files[0]);
-  };
-
-  const handleProductSubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-
-    formData.append("name", newProduct.name);
-    formData.append("price", newProduct.price);
-    formData.append("stock", newProduct.stock);
-    formData.append("category", newProduct.category);
-    formData.append("subcategory", newProduct.subcategory);
-    formData.append("description", newProduct.description);
-
-    if (images) {
-      formData.append("images", images); // Use "images" or "image" based on your backend
-    }
-
+  const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      const response = await axios.patch(
-        `${BASE_URL}/api/seller/products/${productId}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      alert("Product updated successfully!");
-      navigate("/sellerproducts");
-    } catch (error) {
-      console.error("Error updating product:", error.response || error);
-      alert("Failed to update product.");
+      await apiClient.patch(productPath, productFormData(values));
+      if (newImages.length) await uploadImages();
+      toast.success("Product updated successfully!");
+      navigate("/selar_Products");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to update product"));
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  if (loading || error || !product) {
+    return (
+      <PortalShell variant="seller" title="Edit product" actions={<BackButton />}>
+        {loading ? (
+          <div className="grid grid-cols-1 items-start gap-[18px] xl:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]" aria-busy="true">
+            <div className="grid gap-4 rounded-md border border-line-soft bg-surface p-5">
+              <Skeleton className="h-11 w-full" />
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-11" />
+                <Skeleton className="h-11" />
+              </div>
+              <Skeleton className="h-11 w-full" />
+              <Skeleton className="h-9 w-2/3" />
+              <Skeleton className="h-28 w-full" />
+            </div>
+            <div className="grid grid-cols-3 gap-2.5 rounded-md border border-line-soft bg-surface p-5">
+              {Array.from({ length: 3 }, (_, i) => (
+                <Skeleton key={i} className="aspect-3/4" />
+              ))}
+            </div>
+          </div>
+        ) : error ? (
+          <div className="rounded-md border border-line-soft bg-surface">
+            <PanelError title="Could not load this product" message={error} onRetry={reload} />
+          </div>
+        ) : (
+          <EmptyState
+            illustration="results"
+            title="Product not found"
+            body="It may have been removed, or it belongs to another seller."
+            action={<BackButton />}
+          />
+        )}
+      </PortalShell>
+    );
+  }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="w-64 fixed h-full bg-white shadow z-10">
-        <Selar_Sidebar />
-      </div>
+    <Formik initialValues={initialValues} enableReinitialize validationSchema={productSchema} onSubmit={handleSubmit}>
+      {({ values, isSubmitting, dirty }) => {
+        const busy = isSubmitting || uploading;
+        const preview = {
+          _id: product.productId,
+          name: values.name || product.name,
+          price: Number(values.price) || 0,
+          stock: values.stock === "" ? undefined : Number(values.stock),
+          images: currentImages,
+          category: values.category,
+          subcategories: values.subcategories,
+          seller: sellerName ? { name: sellerName } : undefined,
+        };
 
-      {/* Main Content */}
-      <div className="flex-1 ml-64">
-        <div className="sticky top-0 z-10 bg-white shadow">
-          <Selar_Navbar />
-        </div>
+        return (
+          <PortalShell
+            variant="seller"
+            title="Edit product"
+            subtitle={product.name}
+            actions={
+              <>
+                <BackButton />
+                <Button type="submit" form={FORM_ID} disabled={busy}>
+                  {isSubmitting ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Save aria-hidden="true" />}
+                  {isSubmitting ? "Saving…" : "Save changes"}
+                </Button>
+              </>
+            }
+          >
+            <div className="grid grid-cols-1 items-start gap-[18px] xl:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]">
+              <Panel
+                title="Details"
+                titleId="edit-details"
+                action={dirty ? <span className="text-[13px] text-warning">Unsaved changes</span> : null}
+              >
+                <Form id={FORM_ID} noValidate className="p-5">
+                  <ProductFields
+                    categories={categories}
+                    categoriesLoading={categoriesReq.loading}
+                    categoriesError={categoriesReq.error}
+                  />
+                </Form>
+              </Panel>
 
-        <div className="p-6 pt-24">
-          <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-            <h1 className="text-2xl font-bold text-gray-800">Update Product</h1>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-            >
-              <FaPlus /> {showForm ? "Close Form" : "Edit Product"}
-            </button>
-          </div>
+              <div className="grid min-w-0 gap-[18px]">
+                <Panel title="Photos" titleId="edit-photos" count={`${currentImages.length} of ${MAX_IMAGES}`}>
+                  <div className="grid gap-4 p-5">
+                    <ImagePicker
+                      label="Saved and new photos"
+                      files={newImages}
+                      onChange={setNewImages}
+                      existing={currentImages}
+                      max={MAX_IMAGES}
+                      disabled={busy}
+                    />
+                    {newImages.length > 0 && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-line-mid pt-3.5">
+                        <p className="text-[13px] text-muted-foreground">
+                          New photos are added after the saved ones. Saved photos can&rsquo;t be removed here.
+                        </p>
+                        <Button variant="ink" size="sm" onClick={handleUploadOnly} disabled={busy}>
+                          {uploading ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Upload aria-hidden="true" />}
+                          {uploading ? "Uploading…" : `Upload ${newImages.length} photo${newImages.length === 1 ? "" : "s"}`}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </Panel>
 
-          {loading ? (
-            <p>Loading product data...</p>
-          ) : showForm ? (
-            <form
-              onSubmit={handleProductSubmit}
-              className="mb-8 bg-white p-6 rounded shadow space-y-4 border border-gray-200"
-            >
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Product Name"
-                  value={newProduct.name}
-                  onChange={handleChange}
-                  className="border p-2 rounded w-full"
-                  required
-                />
-                <input
-                  type="text"
-                  name="price"
-                  placeholder="Price"
-                  value={newProduct.price}
-                  onChange={handleChange}
-                  className="border p-2 rounded w-full"
-                  required
-                />
-                <input
-                  type="text"
-                  name="stock"
-                  placeholder="Stock"
-                  value={newProduct.stock}
-                  onChange={handleChange}
-                  className="border p-2 rounded w-full"
-                  required
-                />
-                <select
-                  name="category"
-                  value={newProduct.category}
-                  onChange={handleChange}
-                  className="border p-2 rounded w-full"
-                  required
-                >
-                  <option value="">Select Category</option>
-                  <option value="men">Men</option>
-                  <option value="women">Women</option>
-                </select>
+                <Panel title="On the tag" titleId="edit-preview">
+                  <div className="grid grid-cols-[200px_minmax(0,1fr)] items-start gap-4 p-5">
+                    <TagCard product={preview} lowStockAt={LOW_STOCK_AT} style={{ "--tag-ground": "var(--fo-surface)" }} />
+                    <p className="text-[13px] leading-relaxed text-muted-foreground">
+                      How shoppers see this product in the grid. It follows your edits here; the shop shows them once you
+                      save.
+                    </p>
+                  </div>
+                </Panel>
               </div>
-
-              <textarea
-                name="description"
-                placeholder="Description"
-                value={newProduct.description}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-                required
-              />
-
-              <select
-                name="subcategory"
-                value={newProduct.subcategory}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-                required
-              >
-                <option value="">Select Subcategory</option>
-                <option value="dress">Dress</option>
-                <option value="jewelry">Jewelry</option>
-                <option value="footwear">Footwear</option>
-                <option value="shirt">Shirt</option>
-                <option value="watch">Watch</option>
-              </select>
-
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="block"
-              />
-
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
-              >
-                Update Product
-              </button>
-            </form>
-          ) : null}
-        </div>
-      </div>
-    </div>
+            </div>
+          </PortalShell>
+        );
+      }}
+    </Formik>
   );
 };
 

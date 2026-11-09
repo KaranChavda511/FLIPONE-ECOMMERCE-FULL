@@ -1,25 +1,19 @@
 import mongoose from 'mongoose';
-import logger from "../services/logger.js";
+import logger from '../services/logger.js';
 
-const dbLogger = logger.child({ label: ".src/config/db.js" });
+const dbLogger = logger.child({ label: 'config/db.js' });
 
-
-
+// Throws on failure so the server never starts without a database.
 const connectDB = async () => {
+  mongoose.set('strictQuery', true);
   try {
-    mongoose.set('strictQuery', true);
-    // console.log('[2] MONGO_URI:', process.env.MONGO_URI || 'Not found');
-    const conn = await mongoose.connect(`${process.env.MONGO_URI}` );
-
-    dbLogger.info(` MONGODB successfully connected & DB Host: ${conn.connection.host}`);
-
-  
-
+    const conn = await mongoose.connect(process.env.MONGO_URI);
+    dbLogger.info(`MongoDB connected, host: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
-    dbLogger.error(`MONGODB connection failed: ${error.message}, ${ error.stack }`);
-    // process.exit(1);
+    dbLogger.error(`MongoDB connection failed: ${error.message}`);
+    throw error;
   }
 };
-
 
 export default connectDB;

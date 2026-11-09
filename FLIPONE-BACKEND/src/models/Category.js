@@ -1,12 +1,12 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const categorySchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, unique: true },
+    name: { type: String, required: true, unique: true, trim: true },
     subcategories: { type: [String], default: [] },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' }
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Category = mongoose.model('Category', categorySchema);

@@ -1,1 +1,310 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * FlipOne · swing-tag system (direction B; see DESIGN.md).
+ * Light only. `dark:` utilities in shadcn files apply only under a `.dark` ancestor (never set),
+ * so an OS dark-mode preference cannot half-repaint the UI.
+ */
+@custom-variant dark (&:is(.dark *));
+
+/* ---------- Raw palette + shadcn semantic variables ---------- */
+:root {
+  /* palette */
+  --fo-paper: #f5f4f0; /* app ground */
+  --fo-paper-2: #eceae4; /* hover fills, image wells, disabled */
+  --fo-surface: #ffffff; /* tags, panels, tables, inputs */
+  --fo-ink: #17150f; /* text, control borders, portal sidebar */
+  --fo-ink-2: #3b372f; /* secondary ink (labels, notes) */
+  --fo-ink-hover: #38342b; /* hover for ink fills */
+  --fo-muted: #5c584f; /* secondary text: 7.1:1 on white, 6.4:1 on paper */
+  --fo-line: #8a857b; /* input/control borders: 3.7:1 on white (WCAG 1.4.11) */
+  --fo-line-mid: #c4c2bc; /* dashed tag dividers, MRP box, chips (decorative) */
+  --fo-line-soft: #dedcd6; /* card borders, table rules (decorative) */
+  --fo-kraft: #cdae80; /* bands only */
+  --fo-kraft-ink: #4a3b22; /* text on kraft: 5.1:1 */
+  --fo-kraft-deep: #b8955f;
+  --fo-red: #d3261c; /* actions + MRP: white text 5.2:1 */
+  --fo-red-hover: #b01e15;
+  --fo-red-tint: #fcecea;
+  --fo-success: #1e7445;
+  --fo-success-tint: #eaf4ee;
+  --fo-warning: #a15c00;
+  --fo-warning-tint: #fbf1e2;
+  --fo-danger: #9e1b32;
+  --fo-danger-tint: #faecef;
+  --fo-row-hover: #faf8f3;
+  --fo-head: #faf9f6;
+
+  /* shadcn/ui semantic variables, mapped onto the palette */
+  --radius: 6px;
+  --background: var(--fo-paper);
+  --foreground: var(--fo-ink);
+  --card: var(--fo-surface);
+  --card-foreground: var(--fo-ink);
+  --popover: var(--fo-surface);
+  --popover-foreground: var(--fo-ink);
+  --primary: var(--fo-red);
+  --primary-foreground: #ffffff;
+  --secondary: var(--fo-paper-2);
+  --secondary-foreground: var(--fo-ink);
+  --muted: var(--fo-paper-2);
+  --muted-foreground: var(--fo-muted);
+  --accent: var(--fo-paper-2);
+  --accent-foreground: var(--fo-ink);
+  --destructive: var(--fo-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--fo-line-soft);
+  --input: var(--fo-line);
+  --ring: var(--fo-ink);
+  --chart-1: var(--fo-ink);
+  --chart-2: #8a857b; /* secondary series grey (same as charts/tokens.js COLORS.secondary); red is for actions + MRP only */
+  --chart-3: #a8875a; /* chart kraft, same as charts/tokens.js (DESIGN.md "Chart Ink Order") */
+  --chart-4: var(--fo-success);
+  --chart-5: var(--fo-warning);
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Tailwind theme tokens ---------- */
+@theme inline {
+  /* FlipOne palette: bg-paper, text-ink, border-line, bg-kraft, text-red, bg-success-tint ... */
+  --color-paper: var(--fo-paper);
+  --color-paper-2: var(--fo-paper-2);
+  --color-surface: var(--fo-surface);
+  --color-ink: var(--fo-ink);
+  --color-ink-2: var(--fo-ink-2);
+  --color-ink-hover: var(--fo-ink-hover);
+  --color-line: var(--fo-line);
+  --color-line-mid: var(--fo-line-mid);
+  --color-line-soft: var(--fo-line-soft);
+  --color-kraft: var(--fo-kraft);
+  --color-kraft-ink: var(--fo-kraft-ink);
+  --color-kraft-deep: var(--fo-kraft-deep);
+  --color-red: var(--fo-red);
+  --color-red-hover: var(--fo-red-hover);
+  --color-red-tint: var(--fo-red-tint);
+  --color-success: var(--fo-success);
+  --color-success-tint: var(--fo-success-tint);
+  --color-warning: var(--fo-warning);
+  --color-warning-tint: var(--fo-warning-tint);
+  --color-danger: var(--fo-danger);
+  --color-danger-tint: var(--fo-danger-tint);
+  --color-row-hover: var(--fo-row-hover);
+  --color-head: var(--fo-head);
+
+  /* shadcn semantic colours */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--fo-red-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* type: Work Sans body, Barlow Condensed for wordmark, stamps, labels and MRP numerals */
+  --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Barlow Condensed", "Work Sans", ui-sans-serif, sans-serif;
+
+  /* small, crisp radii (stamps 4px, controls/tags 6px) */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: 10px;
+
+  /* tight shadows only: every blur <= 12px */
+  --shadow-2xs: 0 1px 0 rgb(23 21 15 / 0.05);
+  --shadow-xs: 0 1px 2px rgb(23 21 15 / 0.06);
+  --shadow-sm: 0 1px 3px rgb(23 21 15 / 0.18);
+  --shadow-md: 0 1px 2px rgb(23 21 15 / 0.06), 0 4px 12px -4px rgb(23 21 15 / 0.16);
+  --shadow-lg: 0 2px 4px rgb(23 21 15 / 0.08), 0 8px 12px -6px rgb(23 21 15 / 0.22);
+  --shadow-xl: var(--shadow-lg);
+  --shadow-2xl: var(--shadow-lg);
+  --shadow-tag: 0 1px 2px rgb(23 21 15 / 0.06), 0 4px 12px -4px rgb(23 21 15 / 0.16);
+
+  --ease-out-quint: var(--ease-out-quint);
+}
+
+/* ---------- Utilities ---------- */
+/* Tabular lining figures for prices, counts, dates and ids. */
+@utility tabular {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Stamp-style caps label (Barlow Condensed 600, tracked). */
+@utility label-caps {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* The shared focus ring: 2px ink outline, 2px offset. */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* ---------- Base ---------- */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scrollbar-color: #8e8a81 var(--fo-paper);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--fo-paper);
+    color: var(--fo-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    caret-color: var(--fo-red);
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background-color: var(--fo-kraft);
+    color: var(--fo-ink);
+  }
+
+  /* One focus ring everywhere: 2px ink, offset 2px. Components may move the offset inward where clipped. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--fo-muted);
+    opacity: 1;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+/* Motion respects the viewer: collapse CSS animations/transitions when reduced motion is requested.
+   (Motion components additionally use <MotionConfig reducedMotion="user"> in main.jsx.) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* sonner toasts: one ink row; status carried by the icon's shape and tone (src/components/ui/sonner.jsx) */
+[data-sonner-toaster] [data-sonner-toast].fo-toast {
+  --fo-tone: #cdae80; /* default/info: kraft */
+  font-family: var(--font-sans);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 12px 14px 12px 16px;
+  background: #17150f;
+  color: #f5f4f0;
+  border: 1px solid #2e2a22;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgb(23 21 15 / 0.18), 0 8px 12px -6px rgb(23 21 15 / 0.32);
+  overflow: hidden;
+}
+[data-sonner-toast].fo-toast[data-type="success"] { --fo-tone: #5fbf8a; } /* 7.9:1 on ink */
+[data-sonner-toast].fo-toast[data-type="warning"] { --fo-tone: #e8a33d; } /* 8.6:1 */
+[data-sonner-toast].fo-toast[data-type="error"] { --fo-tone: #ff6b5e; }   /* 6.6:1 */
+[data-sonner-toast].fo-toast [data-icon] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex: none;
+  align-self: center;
+  color: var(--fo-tone);
+}
+[data-sonner-toast].fo-toast [data-content] {
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+.fo-toast-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #f5f4f0;
+}
+.fo-toast-desc {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #c9c3b8; /* 10.6:1 on ink */
+}
+[data-sonner-toast].fo-toast [data-button].fo-toast-action,
+[data-sonner-toast].fo-toast [data-button].fo-toast-cancel {
+  flex: none;
+  height: 30px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid #4a453a;
+  border-radius: 4px;
+  background: transparent;
+  color: #f5f4f0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+[data-sonner-toast].fo-toast [data-button].fo-toast-action:hover {
+  background: #2e2a22;
+  border-color: #6b6557;
+}
+[data-sonner-toast].fo-toast [data-button]:focus-visible {
+  outline: 2px solid #cdae80;
+  outline-offset: 2px;
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toast] {
+    transition: opacity 150ms linear !important;
+    --y: 0 !important;
+  }
+}
+
+
+/* Caret in the one-time-code boxes (src/components/ui/input-otp.jsx) */
+@keyframes fo-caret-blink {
+  0%, 70%, 100% { opacity: 1; }
+  20%, 50% { opacity: 0; }
+}

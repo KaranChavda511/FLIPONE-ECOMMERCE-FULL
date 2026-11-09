@@ -1,190 +1,172 @@
-// pages/Seller_Manage.jsx
-import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import axios from "axios";
-import Admin_Sidebar from "../pages/Admin_Sidebar";
-import Admin_Navbar from "../pages/Admin_Navbar";
-import { MdOutlineDeleteForever } from "react-icons/md";
-import Switcher2 from "../managements/Switcher";
+import { useEffect, useState } from "react";
+import { toast } from "@/lib/toast";
+import apiClient, { apiErrorMessage } from "../../config/apiClient";
+import { useApiGet } from "../../hooks/useApiGet";
+import { useUrlState } from "../../hooks/useUrlState";
+import { formatDate } from "@/lib/format";
+import {
+  CellText,
+  DataTable,
+  DataTableFooter,
+  DataTableMessage,
+  EmptyState,
+  PortalShell,
+} from "@/components/flipone";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import SearchBox from "../components/SearchBox";
+import StatusSwitch from "../components/StatusSwitch";
+import Pager, { RangeText } from "../components/Pager";
+import { AnimatedRow, ErrorRow, SkeletonRows } from "../components/TableBits";
+import { useDebouncedValue } from "../components/useDebouncedValue";
+
+const ITEMS_PER_PAGE = 10;
+const COLUMNS = 5;
 
 const Seller_Manage = () => {
-  const { adminInfo } = useSelector((state) => state.admin);
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 10;
-  const BASE_URL = import.meta.env.VITE_BASE_URL;
+  // View state lives in the URL (?q=&page=) so Back/Forward, reloads and shared links keep it.
+  const [pageParam, setCurrentPage] = useUrlState("page", 1, "number");
+  const [q, setQ] = useUrlState("q", "", "string", { resets: ["page"] });
+  const currentPage = Math.max(1, Math.floor(pageParam));
 
+  // The box keeps its own copy so typing never waits on the router (it updates the URL in a transition);
+  // a URL change from elsewhere (Back/Forward, Clear search) is copied back in.
+  const [query, setQuery] = useState(q);
+  const [shownQ, setShownQ] = useState(q);
+  if (q !== shownQ) {
+    setShownQ(q);
+    setQuery(q);
+  }
+  const search = useDebouncedValue(query.trim(), 300);
+
+  // Server-side pagination (page/limit -> sellers + total); ?search= matches name, email and license ID.
+  const { data, loading, error, reload, setData } = useApiGet("/api/admin/allSellers", {
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+    ...(search ? { search } : {}),
+  });
+  const sellers = data?.sellers ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(Math.ceil(total / ITEMS_PER_PAGE), 1);
+
+  // A link to a page past the end (fewer sellers now) moves to the last page instead of an empty table.
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await axios.get(`${BASE_URL}/api/admin/allSellers`, {
-          headers: {
-            Authorization: `Bearer ${adminInfo?.token}`,
-          },
-          params: {
-            page: currentPage,
-            limit: itemsPerPage,
-          },
-        });
+    if (data && !loading && !error && currentPage > totalPages) setCurrentPage(totalPages);
+  }, [data, loading, error, currentPage, totalPages, setCurrentPage]);
 
-        setUsers(response?.data?.sellers ?? []);
-        setTotalPages(Math.ceil((response?.data?.total || 0) / itemsPerPage));
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (adminInfo?.token) {
-      fetchUsers();
-    } else {
-      setLoading(false);
-    }
-  }, [adminInfo, currentPage]);
-
-  const toggleUserStatus = async (id, isActive) => {
-    const confirmToggle = window.confirm(
-      // `Are you sure you want to ${isActive ? "deactivate" : "activate"} this seller?`
-    );
-    if (!confirmToggle) return;
-
+  const toggleSellerStatus = async (seller) => {
+    const action = seller.isActive ? "deactivate" : "activate";
     try {
-      const endpoint = `${BASE_URL}/api/admin/sellers/${id}/toggle-status`;
-
-      await axios.patch(
-        endpoint,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${adminInfo?.token}`,
-          },
-        }
-      );
-
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user._id === id ? { ...user, isActive: !isActive } : user
-        )
-      );
-    } catch (error) {
-      console.error("Error updating user status:", error);
-      alert("Failed to update user status.");
+      await apiClient.patch(`/api/admin/sellers/${seller._id}/toggle-status`);
+      setData((prev) => ({
+        ...prev,
+        sellers: prev.sellers.map((s) => (s._id === seller._id ? { ...s, isActive: !s.isActive } : s)),
+      }));
+      toast.success(`Seller ${action}d`, {
+        description: seller.isActive ? `${seller.name}'s products are now hidden from the store.` : seller.name,
+      });
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to update seller status"));
     }
   };
 
   const handlePageChange = (page) => {
-    if (page > 0 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+    if (page > 0 && page <= totalPages) setCurrentPage(page);
+  };
+
+  const changeQuery = (value) => {
+    setQuery(value);
+    setQ(value);
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="w-64 fixed h-full bg-white shadow z-10">
-        <Admin_Sidebar />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 ml-64">
-        {/* Navbar */}
-        <div className="sticky top-0 z-10 bg-white shadow">
-          <Admin_Navbar />
-        </div>
-
-        {/* Content */}
-        <div className="p-6 pt-24">
-          <h1 className="text-2xl font-bold mb-6 text-gray-800">Seller Management</h1>
-
-          <div className="overflow-x-auto shadow rounded-lg border border-gray-200 bg-white">
-            {loading ? (
-              <p className="p-4">Loading users...</p>
-            ) : !Array.isArray(users) || users.length === 0 ? (
-              <p className="p-4">No users found.</p>
-            ) : (
-              <>
-                <table className="min-w-full text-sm text-left">
-                  <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
-                    <tr>
-                      <th className="px-6 py-3">Name</th>
-                      <th className="px-6 py-3">Email</th>
-                      <th className="px-6 py-3">Role</th>
-                      <th className="px-6 py-3">Status</th>
-                      {/* <th className="px-6 py-3">Actions</th> */}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {users.map((user) => (
-                      <tr key={user._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                          {user.name || "N/A"}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600">{user.email || "N/A"}</td>
-                        <td className="px-6 py-4 capitalize">{user.role || "Seller"}</td>
-                        <td className="px-6 py-4">
-                          <Switcher2
-                            isChecked={user.isActive}
-                            onToggle={() => toggleUserStatus(user._id, user.isActive)}
-                          />
-                        </td>
-                        <td className="px-6 py-4 space-x-2">
-                          <button
-                            className="text-red-600 hover:underline cursor-pointer"
-                            onClick={() => toggleUserStatus(user._id, user.isActive)}
-                            title={user.isActive ? "Deactivate" : "Activate"}
-                          >
-                            {/* <MdOutlineDeleteForever className="h-5 w-5" /> */}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Pagination Controls */}
-                <div className="flex justify-center items-center mt-4 gap-2">
-                  <button
-                    className="px-3 py-1 border rounded-md text-sm font-medium hover:bg-gray-200 disabled:opacity-50"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </button>
-
-                  {[...Array(totalPages)].map((_, index) => {
-                    const page = index + 1;
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-1 border rounded-md text-sm font-medium ${
-                          currentPage === page
-                            ? "bg-blue-600 text-white"
-                            : "hover:bg-gray-200"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  })}
-
-                  <button
-                    className="px-3 py-1 border rounded-md text-sm font-medium hover:bg-gray-200 disabled:opacity-50"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+    <PortalShell
+      variant="admin"
+      title="Sellers"
+      subtitle="Turning a seller off blocks their log in and hides all of their products."
+      actions={
+        <SearchBox value={query} onChange={changeQuery} placeholder="Name, email or license ID" label="Search sellers" />
+      }
+    >
+      <DataTable
+        label="Sellers"
+        footer={
+          !loading &&
+          !error &&
+          total > 0 && (
+            <DataTableFooter>
+              <RangeText page={currentPage} perPage={ITEMS_PER_PAGE} total={total} noun="sellers" />
+              <Pager page={currentPage} totalPages={totalPages} onChange={handlePageChange} label="Seller pages" />
+            </DataTableFooter>
+          )
+        }
+      >
+        <TableHeader>
+          <TableRow>
+            <TableHead>Seller</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>License ID</TableHead>
+            <TableHead>Joined</TableHead>
+            <TableHead>Account</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading ? (
+            <SkeletonRows rows={8} cols={COLUMNS} />
+          ) : error ? (
+            <ErrorRow colSpan={COLUMNS} title="Could not load sellers" message={error} onRetry={reload} />
+          ) : sellers.length === 0 ? (
+            <DataTableMessage colSpan={COLUMNS}>
+              <EmptyState
+                variant="plain"
+                illustration={search ? "results" : "products"}
+                headingLevel="h3"
+                title={search ? "No sellers match" : "No sellers yet"}
+                body={
+                  search
+                    ? `Nothing matches “${search}”. Try a name, email or license ID.`
+                    : "Seller accounts appear here once shops register."
+                }
+                action={
+                  search && (
+                    <Button variant="outline" size="sm" onClick={() => changeQuery("")}>
+                      Clear search
+                    </Button>
+                  )
+                }
+              />
+            </DataTableMessage>
+          ) : (
+            sellers.map((seller, index) => (
+              <AnimatedRow key={seller._id} index={index}>
+                <TableCell>
+                  <CellText strong max="24ch">
+                    {seller.name || "Unnamed seller"}
+                  </CellText>
+                </TableCell>
+                <TableCell>
+                  <CellText max="30ch" className="text-ink-2">
+                    {seller.email || "—"}
+                  </CellText>
+                </TableCell>
+                <TableCell className="font-display text-[14px] font-semibold tracking-[0.06em] tabular">
+                  {seller.licenseID || "—"}
+                </TableCell>
+                <TableCell className="text-muted-foreground tabular">{formatDate(seller.createdAt)}</TableCell>
+                <TableCell>
+                  <StatusSwitch
+                    kind="seller"
+                    name={seller.name}
+                    active={seller.isActive}
+                    onConfirm={() => toggleSellerStatus(seller)}
+                  />
+                </TableCell>
+              </AnimatedRow>
+            ))
+          )}
+        </TableBody>
+      </DataTable>
+    </PortalShell>
   );
 };
 

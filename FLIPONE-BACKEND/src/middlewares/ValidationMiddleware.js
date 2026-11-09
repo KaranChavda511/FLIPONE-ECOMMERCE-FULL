@@ -1,80 +1,39 @@
-// src/middlewares/ValidationMiddleware.js
 import logger from '../services/logger.js';
 import * as validation from '../services/Validation.js';
 
 const validationLogger = logger.child({ label: 'middlewares/ValidationMiddleware.js' });
 
+/**
+ * validator('userSchemas.login') validates req.body with that Joi schema.
+ * The cleaned value (unknown keys stripped, types converted) replaces req.body and is also
+ * kept as req.validatedData, so controllers can never read unvalidated fields.
+ * The schema is resolved once at startup, so a typo'd name fails fast instead of on first request.
+ */
 export const validator = (schemaName) => {
+  const [group, key] = schemaName.split('.');
+  const schema = validation[group]?.[key];
+  if (!schema) throw new Error(`Validation schema "${schemaName}" not found`);
+
   return async (req, res, next) => {
     try {
-      const [category, schemaKey] = schemaName.split('.');
-      
-      if (!validation[category]) {
-        validationLogger.error(`Schema category "${category}" not found`);
-        return res.status(500).json({
-          status: 500,
-          message: `Internal server error: Schema category "${category}" not found`,
-        });
-      }
-
-      const schema = validation[category][schemaKey];
-      if (!schema) {
-        validationLogger.error(`Schema "${schemaName}" not found`);
-        return res.status(500).json({
-          status: 500,
-          message: `Internal server error: Schema "${schemaName}" not found`,
-        });
-      }
-
-      // Combine body and files for validation
-      const dataToValidate = {
-        ...req.body,
-        ...(req.files && { files: req.files })
-      };
-
-      const validated = await schema.validateAsync(dataToValidate, {
+      const value = await schema.validateAsync(req.body ?? {}, {
         abortEarly: false,
         stripUnknown: true,
-        convert: true
+        convert: true,
       });
-
-      req.validatedData = validated;
+      req.body = value;
+      req.validatedData = value;
       next();
     } catch (err) {
-      // Handle Joi errors first
-      if (err.isJoi) {
-        const errors = err.details ? err.details.map((detail) => ({
-          field: detail.context.key,
-          message: detail.message.replace(/['"]+/g, '')
-        })) : [{
-          field: 'general',
-          message: 'Validation error occurred'
-        }];
+      if (!err.isJoi) return next(err);
 
-        validationLogger.warn(`Validation Error: ${JSON.stringify(errors)}`, {
-          originalData: err._original
-        });
-
-        return res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors
-        });
-      }
-
-      // Handle other errors
-      validationLogger.error(`Unexpected validation error: ${err.message}`, {
-        stack: err.stack,
-        originalError: err
-      });
-      
-      return res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
+      const errors = err.details.map((detail) => ({
+        field: detail.path.join('.'),
+        message: detail.message.replace(/['"]+/g, ''),
+      }));
+      // Field names only. The old code logged the raw body, which put plaintext passwords in the logs.
+      validationLogger.warn(`Validation failed for ${schemaName}`, { fields: errors.map((e) => e.field) });
+      res.status(400).json({ success: false, message: 'Validation failed', errors });
     }
   };
 };
-
-
-

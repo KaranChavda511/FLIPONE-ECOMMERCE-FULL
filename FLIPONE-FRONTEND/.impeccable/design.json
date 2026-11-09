@@ -1,0 +1,716 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-09T15:13:58.267Z",
+  "title": "Design System: FlipOne",
+  "extensions": {
+    "colorMeta": {
+      "tag-red": {
+        "role": "primary",
+        "displayName": "Tag Red",
+        "canonical": "#D3261C",
+        "oklch": "oklch(56.0% 0.208 29.1)",
+        "tonalRamp": [
+          "#240000",
+          "#510000",
+          "#820000",
+          "#B60000",
+          "#D6493B",
+          "#EC8274",
+          "#FDB6AB",
+          "#FFE5DF"
+        ]
+      },
+      "tag-red-hover": {
+        "role": "primary",
+        "displayName": "Pressed Red",
+        "canonical": "#B01E15",
+        "oklch": "oklch(48.9% 0.182 29.3)",
+        "tonalRamp": [
+          "#240000",
+          "#510000",
+          "#820000",
+          "#AD1A11",
+          "#D6493A",
+          "#EC8273",
+          "#FDB6AB",
+          "#FFE5DF"
+        ]
+      },
+      "tag-red-tint": {
+        "role": "primary",
+        "displayName": "Red Blush",
+        "canonical": "#FCECEA",
+        "oklch": "oklch(95.5% 0.018 26.1)",
+        "tonalRamp": [
+          "#120807",
+          "#2C2120",
+          "#493C3B",
+          "#675A58",
+          "#8B7C7B",
+          "#AFA19F",
+          "#D6C6C4",
+          "#FAEAE8"
+        ]
+      },
+      "kraft": {
+        "role": "secondary",
+        "displayName": "Kraft",
+        "canonical": "#CDAE80",
+        "oklch": "oklch(76.7% 0.071 77.2)",
+        "tonalRamp": [
+          "#1B0400",
+          "#371E00",
+          "#543A0A",
+          "#74582C",
+          "#987B4E",
+          "#BE9F72",
+          "#E5C596",
+          "#FEECD1"
+        ]
+      },
+      "kraft-deep": {
+        "role": "secondary",
+        "displayName": "Deep Kraft",
+        "canonical": "#B8955F",
+        "oklch": "oklch(69.0% 0.083 77.6)",
+        "tonalRamp": [
+          "#1C0300",
+          "#391C00",
+          "#573900",
+          "#775720",
+          "#9C7A44",
+          "#C29E68",
+          "#E9C48D",
+          "#FEECD1"
+        ]
+      },
+      "kraft-mark": {
+        "role": "secondary",
+        "displayName": "Kraft Mark",
+        "canonical": "#A8875A",
+        "oklch": "oklch(64.4% 0.073 74.5)",
+        "tonalRamp": [
+          "#1C0400",
+          "#381D00",
+          "#563908",
+          "#76572B",
+          "#9A7A4D",
+          "#C09E71",
+          "#E7C495",
+          "#FFEBD2"
+        ]
+      },
+      "kraft-ink": {
+        "role": "secondary",
+        "displayName": "Kraft Ink",
+        "canonical": "#4A3B22",
+        "oklch": "oklch(36.2% 0.044 79.5)",
+        "tonalRamp": [
+          "#150800",
+          "#2F2108",
+          "#4C3D24",
+          "#6B5B41",
+          "#8E7E63",
+          "#B4A286",
+          "#DAC8AB",
+          "#FDECD1"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Shop Ink",
+        "canonical": "#17150F",
+        "oklch": "oklch(19.6% 0.012 91.8)",
+        "tonalRamp": [
+          "#17150F",
+          "#2E2A22",
+          "#3B372F",
+          "#5C584F",
+          "#8A857B",
+          "#C4C2BC",
+          "#DEDCD6",
+          "#F5F4F0"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "#3B372F",
+        "oklch": "oklch(33.8% 0.015 84.6)",
+        "tonalRamp": [
+          "#0E0B05",
+          "#27241C",
+          "#433F37",
+          "#615D54",
+          "#848077",
+          "#A9A49A",
+          "#CFCAC0",
+          "#F3EEE4"
+        ]
+      },
+      "ink-hover": {
+        "role": "neutral",
+        "displayName": "Ink Hover",
+        "canonical": "#38342B",
+        "oklch": "oklch(32.6% 0.016 86.9)",
+        "tonalRamp": [
+          "#0E0B04",
+          "#27241B",
+          "#433F36",
+          "#625D53",
+          "#848075",
+          "#A9A499",
+          "#CFCABF",
+          "#F3EEE2"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#5C584F",
+        "oklch": "oklch(46.1% 0.015 86.9)",
+        "tonalRamp": [
+          "#0E0B05",
+          "#27241C",
+          "#433F37",
+          "#615D54",
+          "#848076",
+          "#A9A49A",
+          "#CFCAC0",
+          "#F3EEE3"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Control Line",
+        "canonical": "#8A857B",
+        "oklch": "oklch(61.8% 0.016 84.6)",
+        "tonalRamp": [
+          "#0E0B05",
+          "#28241B",
+          "#443F36",
+          "#625D54",
+          "#858076",
+          "#A9A49A",
+          "#CFCABF",
+          "#F3EEE3"
+        ]
+      },
+      "line-mid": {
+        "role": "neutral",
+        "displayName": "Tear Line",
+        "canonical": "#C4C2BC",
+        "oklch": "oklch(81.4% 0.009 91.5)",
+        "tonalRamp": [
+          "#0C0B07",
+          "#25241F",
+          "#41403B",
+          "#5F5D58",
+          "#82807B",
+          "#A6A49F",
+          "#CCCAC4",
+          "#F0EEE8"
+        ]
+      },
+      "line-soft": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#DEDCD6",
+        "oklch": "oklch(89.4% 0.008 91.5)",
+        "tonalRamp": [
+          "#0C0B07",
+          "#25241F",
+          "#41403B",
+          "#5F5D58",
+          "#82807B",
+          "#A6A49F",
+          "#CCCAC4",
+          "#F0EEE8"
+        ]
+      },
+      "chart-grid": {
+        "role": "neutral",
+        "displayName": "Chart Grid",
+        "canonical": "#E6E3DC",
+        "oklch": "oklch(91.6% 0.010 87.5)",
+        "tonalRamp": [
+          "#0D0B07",
+          "#26241F",
+          "#423F3A",
+          "#605D57",
+          "#83807A",
+          "#A7A49E",
+          "#CDCAC3",
+          "#F1EEE7"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#F5F4F0",
+        "oklch": "oklch(96.7% 0.005 95.1)",
+        "tonalRamp": [
+          "#17150F",
+          "#3B372F",
+          "#5C584F",
+          "#8A857B",
+          "#C4C2BC",
+          "#DEDCD6",
+          "#ECEAE4",
+          "#F5F4F0"
+        ]
+      },
+      "paper-2": {
+        "role": "neutral",
+        "displayName": "Paper Fold",
+        "canonical": "#ECEAE4",
+        "oklch": "oklch(93.7% 0.008 91.5)",
+        "tonalRamp": [
+          "#0C0B07",
+          "#252420",
+          "#41403B",
+          "#5F5D58",
+          "#82807B",
+          "#A6A49F",
+          "#CCCAC5",
+          "#F0EEE8"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Tag White",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#242424",
+          "#404040",
+          "#5D5D5D",
+          "#808080",
+          "#A4A4A4",
+          "#CACACA",
+          "#EEEEEE"
+        ]
+      },
+      "table-head": {
+        "role": "neutral",
+        "displayName": "Ledger Head",
+        "canonical": "#FAF9F6",
+        "oklch": "oklch(98.2% 0.004 91.4)",
+        "tonalRamp": [
+          "#0C0B09",
+          "#252422",
+          "#40403D",
+          "#5E5D5B",
+          "#81807D",
+          "#A5A4A2",
+          "#CBCAC7",
+          "#EFEEEB"
+        ]
+      },
+      "row-hover": {
+        "role": "neutral",
+        "displayName": "Row Warmth",
+        "canonical": "#FAF8F3",
+        "oklch": "oklch(97.9% 0.007 88.6)",
+        "tonalRamp": [
+          "#0C0B08",
+          "#252420",
+          "#41403C",
+          "#5F5D59",
+          "#82807C",
+          "#A6A4A0",
+          "#CCCAC5",
+          "#F0EEE9"
+        ]
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "Ledger Green",
+        "canonical": "#1E7445",
+        "oklch": "oklch(49.7% 0.110 154.6)",
+        "tonalRamp": [
+          "#001300",
+          "#003106",
+          "#004F23",
+          "#176F40",
+          "#429362",
+          "#68B986",
+          "#9FDBB2",
+          "#DBF7E3"
+        ]
+      },
+      "success-tint": {
+        "role": "tertiary",
+        "displayName": "Green Tint",
+        "canonical": "#EAF4EE",
+        "oklch": "oklch(95.8% 0.013 159.9)",
+        "tonalRamp": [
+          "#070D09",
+          "#1F2622",
+          "#3A423D",
+          "#58605B",
+          "#7A837D",
+          "#9EA7A2",
+          "#C4CDC7",
+          "#E7F1EB"
+        ]
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Amber Ink",
+        "canonical": "#A15C00",
+        "oklch": "oklch(54.2% 0.124 62.5)",
+        "tonalRamp": [
+          "#200000",
+          "#4A0800",
+          "#6B2A00",
+          "#8D4A00",
+          "#B46D21",
+          "#DB924B",
+          "#F3BF92",
+          "#FFE9D4"
+        ]
+      },
+      "warning-tint": {
+        "role": "tertiary",
+        "displayName": "Amber Tint",
+        "canonical": "#FBF1E2",
+        "oklch": "oklch(96.2% 0.023 78.2)",
+        "tonalRamp": [
+          "#100A02",
+          "#2A2318",
+          "#463E32",
+          "#655C50",
+          "#887F71",
+          "#ADA395",
+          "#D3C9BB",
+          "#F7EDDE"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Oxblood",
+        "canonical": "#9E1B32",
+        "oklch": "oklch(45.7% 0.164 18.1)",
+        "tonalRamp": [
+          "#230001",
+          "#50000A",
+          "#81001B",
+          "#A62538",
+          "#D04E5A",
+          "#EB8085",
+          "#FDB5B6",
+          "#FFE4E4"
+        ]
+      },
+      "danger-tint": {
+        "role": "tertiary",
+        "displayName": "Oxblood Tint",
+        "canonical": "#FAECEF",
+        "oklch": "oklch(95.5% 0.016 2.7)",
+        "tonalRamp": [
+          "#11080A",
+          "#2B2123",
+          "#473C3F",
+          "#665A5D",
+          "#897C7F",
+          "#AEA1A4",
+          "#D4C6C9",
+          "#F8EAED"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Kraft band heading only (Barlow Condensed 700)."
+      },
+      "numeral-lg": {
+        "displayName": "Numeral Large",
+        "purpose": "Feature-tag and product-page MRP figure, cart summary total; tag red."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Stat tiles and chart headline figures; ink, 28px below 1280px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles (26-28px)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section heads on storefront pages."
+      },
+      "title-sm": {
+        "displayName": "Panel Title",
+        "purpose": "Panel heads in portals."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text and control text."
+      },
+      "body-sm": {
+        "displayName": "Small",
+        "purpose": "Notes, captions, toast descriptions; nothing functional under 12px."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Table headers and definition-list labels: Barlow caps, +0.1em, muted."
+      },
+      "stamp": {
+        "displayName": "Stamp",
+        "purpose": "Status and category stamps."
+      }
+    },
+    "shadows": [
+      {
+        "name": "tag",
+        "value": "0 1px 2px rgb(23 21 15 / 0.06), 0 4px 12px -4px rgb(23 21 15 / 0.16)",
+        "purpose": "Tag and category tile on hover or keyboard focus only."
+      },
+      {
+        "name": "float",
+        "value": "0 2px 4px rgb(23 21 15 / 0.08), 0 8px 12px -6px rgb(23 21 15 / 0.22)",
+        "purpose": "Popovers, menus, dropdowns."
+      },
+      {
+        "name": "toast",
+        "value": "0 2px 4px rgb(23 21 15 / 0.18), 0 8px 12px -6px rgb(23 21 15 / 0.32)",
+        "purpose": "Ink toast rows."
+      },
+      {
+        "name": "hairline",
+        "value": "0 1px 3px rgb(23 21 15 / 0.18)",
+        "purpose": "White wishlist disc over product photos."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-quint",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Default easing for all state transitions."
+      },
+      {
+        "name": "duration-control",
+        "value": "150ms",
+        "purpose": "Button, input, nav and row colour changes."
+      },
+      {
+        "name": "duration-tag",
+        "value": "200ms",
+        "purpose": "Tag lift, photo scale 1.03, quick-add bar reveal."
+      },
+      {
+        "name": "toast-duration",
+        "value": "4000ms",
+        "purpose": "Default toast timeout; errors use 6000ms."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "CSS animation/transition durations under prefers-reduced-motion; Motion uses reducedMotion=user; charts turn animation off."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "min",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      },
+      {
+        "name": "wide-gap",
+        "value": "1800px"
+      },
+      {
+        "name": "max",
+        "value": "1920px"
+      },
+      {
+        "name": "content-max",
+        "value": "1600px"
+      }
+    ],
+    "focusRing": {
+      "value": "outline: 2px solid #17150F; outline-offset: 2px",
+      "purpose": "One focus ring everywhere; paper on the ink sidebar, kraft inside toasts."
+    },
+    "chartPalette": {
+      "series": [
+        "#17150F",
+        "#8A857B",
+        "#A8875A",
+        "#1E7445",
+        "#A15C00",
+        "#5C584F"
+      ],
+      "status": {
+        "pending": "#A15C00",
+        "shipped": "#17150F",
+        "delivered": "#1E7445",
+        "cancelled": "#9E1B32"
+      },
+      "grid": "#E6E3DC",
+      "axis": "#8A857B",
+      "forbidden": [
+        "#D3261C"
+      ]
+    },
+    "toastTones": {
+      "info": "#CDAE80",
+      "success": "#5FBF8A",
+      "warning": "#E8A33D",
+      "error": "#FF6B5E"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Tag red: the one main action per view (Add to cart, Place order, Save).",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z\"/><path d=\"M3 6h18\"/><path d=\"M16 10a4 4 0 0 1-8 0\"/></svg>Add to cart</button>",
+      "css": ":host{--fo-paper:#F5F4F0;--fo-paper-2:#ECEAE4;--fo-surface:#FFFFFF;--fo-ink:#17150F;--fo-ink-2:#3B372F;--fo-ink-hover:#38342B;--fo-muted:#5C584F;--fo-line:#8A857B;--fo-line-mid:#C4C2BC;--fo-line-soft:#DEDCD6;--fo-kraft:#CDAE80;--fo-red:#D3261C;--fo-red-hover:#B01E15;--fo-success:#1E7445;--fo-success-tint:#EAF4EE;--fo-warning:#A15C00;--fo-warning-tint:#FBF1E2;--fo-danger:#9E1B32;--fo-danger-tint:#FAECEF;--fo-head:#FAF9F6;--fo-row-hover:#FAF8F3;--ease-out-quint:cubic-bezier(0.22,1,0.36,1);} .ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:6px;border:1.5px solid transparent;font:600 15px/1 'Work Sans',ui-sans-serif,system-ui,sans-serif;cursor:pointer;transition:background-color 150ms var(--ease-out-quint),border-color 150ms var(--ease-out-quint),transform 150ms var(--ease-out-quint);background:var(--fo-red);color:#fff;} .ds-btn-primary:hover{background:var(--fo-red-hover);} .ds-btn-primary:focus-visible{outline:2px solid var(--fo-ink);outline-offset:2px;} .ds-btn-primary:active{transform:scale(.98);}"
+    },
+    {
+      "name": "Ink Button",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "Strong secondary; also the search submit and the tag's quick Add bar.",
+      "html": "<button class=\"ds-btn-ink\">Open a seller account</button>",
+      "css": ":host{--fo-paper:#F5F4F0;--fo-paper-2:#ECEAE4;--fo-surface:#FFFFFF;--fo-ink:#17150F;--fo-ink-2:#3B372F;--fo-ink-hover:#38342B;--fo-muted:#5C584F;--fo-line:#8A857B;--fo-line-mid:#C4C2BC;--fo-line-soft:#DEDCD6;--fo-kraft:#CDAE80;--fo-red:#D3261C;--fo-red-hover:#B01E15;--fo-success:#1E7445;--fo-success-tint:#EAF4EE;--fo-warning:#A15C00;--fo-warning-tint:#FBF1E2;--fo-danger:#9E1B32;--fo-danger-tint:#FAECEF;--fo-head:#FAF9F6;--fo-row-hover:#FAF8F3;--ease-out-quint:cubic-bezier(0.22,1,0.36,1);} .ds-btn-ink{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:6px;border:1.5px solid transparent;font:600 15px/1 'Work Sans',ui-sans-serif,system-ui,sans-serif;cursor:pointer;transition:background-color 150ms var(--ease-out-quint),border-color 150ms var(--ease-out-quint),transform 150ms var(--ease-out-quint);background:var(--fo-ink);color:var(--fo-paper);} .ds-btn-ink:hover{background:var(--fo-ink-hover);} .ds-btn-ink:focus-visible{outline:2px solid var(--fo-ink);outline-offset:2px;} .ds-btn-ink:active{transform:scale(.98);}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Ink-bordered white: Export, Next, secondary page actions.",
+      "html": "<button class=\"ds-btn-outline\">Next</button>",
+      "css": ":host{--fo-paper:#F5F4F0;--fo-paper-2:#ECEAE4;--fo-surface:#FFFFFF;--fo-ink:#17150F;--fo-ink-2:#3B372F;--fo-ink-hover:#38342B;--fo-muted:#5C584F;--fo-line:#8A857B;--fo-line-mid:#C4C2BC;--fo-line-soft:#DEDCD6;--fo-kraft:#CDAE80;--fo-red:#D3261C;--fo-red-hover:#B01E15;--fo-success:#1E7445;--fo-success-tint:#EAF4EE;--fo-warning:#A15C00;--fo-warning-tint:#FBF1E2;--fo-danger:#9E1B32;--fo-danger-tint:#FAECEF;--fo-head:#FAF9F6;--fo-row-hover:#FAF8F3;--ease-out-quint:cubic-bezier(0.22,1,0.36,1);} .ds-btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:6px;border:1.5px solid transparent;font:600 15px/1 'Work Sans',ui-sans-serif,system-ui,sans-serif;cursor:pointer;transition:background-color 150ms var(--ease-out-quint),border-color 150ms var(--ease-out-quint),transform 150ms var(--ease-out-quint);background:var(--fo-surface);color:var(--fo-ink);border-color:var(--fo-ink);} .ds-btn-outline:hover{background:var(--fo-paper-2);} .ds-btn-outline:focus-visible{outline:2px solid var(--fo-ink);outline-offset:2px;} .ds-btn-outline:active{transform:scale(.98);}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "44px field, 1.5px control-line border; ink border and 2px ring on focus.",
+      "html": "<label class=\"ds-fld\"><span class=\"ds-fld-l\">Full name</span><input class=\"ds-input\" placeholder=\"As on the parcel\" /></label>",
+      "css": ":host{--fo-paper:#F5F4F0;--fo-paper-2:#ECEAE4;--fo-surface:#FFFFFF;--fo-ink:#17150F;--fo-ink-2:#3B372F;--fo-ink-hover:#38342B;--fo-muted:#5C584F;--fo-line:#8A857B;--fo-line-mid:#C4C2BC;--fo-line-soft:#DEDCD6;--fo-kraft:#CDAE80;--fo-red:#D3261C;--fo-red-hover:#B01E15;--fo-success:#1E7445;--fo-success-tint:#EAF4EE;--fo-warning:#A15C00;--fo-warning-tint:#FBF1E2;--fo-danger:#9E1B32;--fo-danger-tint:#FAECEF;--fo-head:#FAF9F6;--fo-row-hover:#FAF8F3;--ease-out-quint:cubic-bezier(0.22,1,0.36,1);} .ds-fld{display:grid;gap:6px;width:280px;} .ds-fld-l{font:600 13.5px/1.3 'Work Sans',sans-serif;color:var(--fo-ink);} .ds-input{height:44px;padding:0 12px;border:1.5px solid var(--fo-line);border-radius:6px;background:var(--fo-surface);color:var(--fo-ink);font:400 15px 'Work Sans',sans-serif;transition:border-color 150ms var(--ease-out-quint);} .ds-input::placeholder{color:var(--fo-muted);} .ds-input:hover{border-color:var(--fo-ink-2);} .ds-input:focus{border-color:var(--fo-ink);} .ds-input:focus-visible{outline:2px solid var(--fo-ink);outline-offset:2px;}"
+    },
+    {
+      "name": "Status Stamps",
+      "kind": "chip",
+      "refersTo": "stamp-pending",
+      "description": "The state language: dashed PENDING, ink SHIPPED, checked DELIVERED, oxblood CANCELLED, ONLY N LEFT.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-stamp ds-stamp--pending\">Pending</span><span class=\"ds-stamp ds-stamp--shipped\">Shipped</span><span class=\"ds-stamp ds-stamp--delivered\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>Delivered</span><span class=\"ds-stamp ds-stamp--cancelled\">Cancelled</span><span class=\"ds-stamp ds-stamp--low\">Only 2 left</span></div>",
+      "css": ":host{--fo-paper:#F5F4F0;--fo-paper-2:#ECEAE4;--fo-surface:#FFFFFF;--fo-ink:#17150F;--fo-ink-2:#3B372F;--fo-ink-hover:#38342B;--fo-muted:#5C584F;--fo-line:#8A857B;--fo-line-mid:#C4C2BC;--fo-line-soft:#DEDCD6;--fo-kraft:#CDAE80;--fo-red:#D3261C;--fo-red-hover:#B01E15;--fo-success:#1E7445;--fo-success-tint:#EAF4EE;--fo-warning:#A15C00;--fo-warning-tint:#FBF1E2;--fo-danger:#9E1B32;--fo-danger-tint:#FAECEF;--fo-head:#FAF9F6;--fo-row-hover:#FAF8F3;--ease-out-quint:cubic-bezier(0.22,1,0.36,1);} .ds-stamp{display:inline-flex;align-items:center;gap:5px;height:24px;padding:1px 8px 0;border:1.5px solid currentColor;border-radius:4px;font:600 13px/1 'Barlow Condensed','Work Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;} .ds-stamp--pending{border-style:dashed;background:var(--fo-surface);color:var(--fo-warning);} .ds-stamp--shipped{background:var(--fo-surface);color:var(--fo-ink);} .ds-stamp--delivered{background:var(--fo-success-tint);color:var(--fo-success);} .ds-stamp--cancelled{background:var(--fo-danger-tint);color:var(--fo-danger);} .ds-stamp--low{background:var(--fo-warning-tint);color:var(--fo-warning);} .ds-row{display:flex;gap:8px;flex-wrap:wrap;}"
+    },
+    {
+      "name": "MRP Block",
+      "kind": "custom",
+      "refersTo": "mrp-block",
+      "description": "The printed price on every product tag: boxed label, tag-red tabular figure, tax note.",
+      "html": "<span class=\"ds-mrp\"><span class=\"ds-mrp-k\">MRP</span><span class=\"ds-mrp-v\">₹1,299</span><span class=\"ds-mrp-n\">(incl. of all taxes)</span></span>",
+      "css": ":host{--fo-paper:#F5F4F0;--fo-paper-2:#ECEAE4;--fo-surface:#FFFFFF;--fo-ink:#17150F;--fo-ink-2:#3B372F;--fo-ink-hover:#38342B;--fo-muted:#5C584F;--fo-line:#8A857B;--fo-line-mid:#C4C2BC;--fo-line-soft:#DEDCD6;--fo-kraft:#CDAE80;--fo-red:#D3261C;--fo-red-hover:#B01E15;--fo-success:#1E7445;--fo-success-tint:#EAF4EE;--fo-warning:#A15C00;--fo-warning-tint:#FBF1E2;--fo-danger:#9E1B32;--fo-danger-tint:#FAECEF;--fo-head:#FAF9F6;--fo-row-hover:#FAF8F3;--ease-out-quint:cubic-bezier(0.22,1,0.36,1);} .ds-mrp{display:inline-grid;grid-template-columns:auto auto;align-items:baseline;column-gap:6px;padding:5px 8px 4px;border:1px solid var(--fo-line-mid);border-radius:4px;background:var(--fo-surface);} .ds-mrp-k{font:600 12px/1 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:var(--fo-ink-2);} .ds-mrp-v{font:600 24px/1 'Barlow Condensed',sans-serif;letter-spacing:.01em;color:var(--fo-red);font-variant-numeric:tabular-nums lining-nums;} .ds-mrp-n{grid-column:1/-1;margin-top:3px;font:400 12px/1.3 'Work Sans',sans-serif;color:var(--fo-muted);}"
+    },
+    {
+      "name": "Tag Card",
+      "kind": "card",
+      "refersTo": "tag-card",
+      "description": "Product swing tag: 3:4 photo well, dashed tear line, name, seller, MRP, category stamp and stock. Lifts 2px on hover.",
+      "html": "<article class=\"ds-tag\"><div class=\"ds-tag-img\"></div><div class=\"ds-tag-body\"><h3 class=\"ds-tag-name\">Gold Clover Bracelet Stack</h3><p class=\"ds-tag-seller\">Tara Jewels</p><span class=\"ds-mrp\"><span class=\"ds-mrp-k\">MRP</span><span class=\"ds-mrp-v\">₹1,299</span><span class=\"ds-mrp-n\">(incl. of all taxes)</span></span><div class=\"ds-tag-foot\"><span class=\"ds-cat\">Jewellery · Bracelets</span><span class=\"ds-stock\">8 in stock</span></div></div></article>",
+      "css": ":host{--fo-paper:#F5F4F0;--fo-paper-2:#ECEAE4;--fo-surface:#FFFFFF;--fo-ink:#17150F;--fo-ink-2:#3B372F;--fo-ink-hover:#38342B;--fo-muted:#5C584F;--fo-line:#8A857B;--fo-line-mid:#C4C2BC;--fo-line-soft:#DEDCD6;--fo-kraft:#CDAE80;--fo-red:#D3261C;--fo-red-hover:#B01E15;--fo-success:#1E7445;--fo-success-tint:#EAF4EE;--fo-warning:#A15C00;--fo-warning-tint:#FBF1E2;--fo-danger:#9E1B32;--fo-danger-tint:#FAECEF;--fo-head:#FAF9F6;--fo-row-hover:#FAF8F3;--ease-out-quint:cubic-bezier(0.22,1,0.36,1);} .ds-mrp{display:inline-grid;grid-template-columns:auto auto;align-items:baseline;column-gap:6px;padding:5px 8px 4px;border:1px solid var(--fo-line-mid);border-radius:4px;background:var(--fo-surface);} .ds-mrp-k{font:600 12px/1 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:var(--fo-ink-2);} .ds-mrp-v{font:600 24px/1 'Barlow Condensed',sans-serif;letter-spacing:.01em;color:var(--fo-red);font-variant-numeric:tabular-nums lining-nums;} .ds-mrp-n{grid-column:1/-1;margin-top:3px;font:400 12px/1.3 'Work Sans',sans-serif;color:var(--fo-muted);} .ds-tag{width:220px;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--fo-line-soft);border-radius:6px;background:var(--fo-surface);transition:border-color 200ms var(--ease-out-quint),box-shadow 200ms var(--ease-out-quint),transform 200ms var(--ease-out-quint);} .ds-tag:hover,.ds-tag:focus-within{transform:translateY(-2px);border-color:var(--fo-line-mid);box-shadow:0 1px 2px rgb(23 21 15/.06),0 4px 12px -4px rgb(23 21 15/.16);} .ds-tag-img{aspect-ratio:3/4;background:var(--fo-paper-2);} .ds-tag-body{display:flex;flex-direction:column;gap:8px;padding:11px 12px 12px;border-top:1px dashed var(--fo-line-mid);} .ds-tag-name{margin:0;font:600 14.5px/1.3 'Work Sans',sans-serif;color:var(--fo-ink);} .ds-tag-seller{margin:-4px 0 0;font:400 12.5px 'Work Sans',sans-serif;color:var(--fo-muted);} .ds-tag .ds-mrp{align-self:flex-start;} .ds-tag-foot{display:flex;justify-content:space-between;align-items:center;gap:6px;} .ds-cat{display:inline-flex;align-items:center;height:22px;padding:1px 8px 0;border:1px solid var(--fo-line);border-radius:4px;font:500 13px/1 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--fo-muted);} .ds-stock{font:400 12.5px 'Work Sans',sans-serif;color:var(--fo-muted);font-variant-numeric:tabular-nums;}"
+    },
+    {
+      "name": "Status Meter List",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "Status summary: stamp, 1px meter in the status colour, tabular count and share. Replaces donuts.",
+      "html": "<section class=\"ds-sml\"><div class=\"ds-sml-h\"><h2>Orders by status</h2><p>35 orders · incl. 1 cancelled</p></div><ul><li><span class=\"ds-stamp ds-stamp--pending\">Pending</span><span class=\"ds-m\"><i style=\"width:17%;background:var(--fo-warning)\"></i></span><b>6</b><s>17%</s></li><li><span class=\"ds-stamp ds-stamp--shipped\">Shipped</span><span class=\"ds-m\"><i style=\"width:14%;background:var(--fo-ink)\"></i></span><b>5</b><s>14%</s></li><li><span class=\"ds-stamp ds-stamp--delivered\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>Delivered</span><span class=\"ds-m\"><i style=\"width:66%;background:var(--fo-success)\"></i></span><b>23</b><s>66%</s></li><li><span class=\"ds-stamp ds-stamp--cancelled\">Cancelled</span><span class=\"ds-m\"><i style=\"width:3%;background:var(--fo-danger)\"></i></span><b>1</b><s>3%</s></li></ul></section>",
+      "css": ":host{--fo-paper:#F5F4F0;--fo-paper-2:#ECEAE4;--fo-surface:#FFFFFF;--fo-ink:#17150F;--fo-ink-2:#3B372F;--fo-ink-hover:#38342B;--fo-muted:#5C584F;--fo-line:#8A857B;--fo-line-mid:#C4C2BC;--fo-line-soft:#DEDCD6;--fo-kraft:#CDAE80;--fo-red:#D3261C;--fo-red-hover:#B01E15;--fo-success:#1E7445;--fo-success-tint:#EAF4EE;--fo-warning:#A15C00;--fo-warning-tint:#FBF1E2;--fo-danger:#9E1B32;--fo-danger-tint:#FAECEF;--fo-head:#FAF9F6;--fo-row-hover:#FAF8F3;--ease-out-quint:cubic-bezier(0.22,1,0.36,1);} .ds-stamp{display:inline-flex;align-items:center;gap:5px;height:24px;padding:1px 8px 0;border:1.5px solid currentColor;border-radius:4px;font:600 13px/1 'Barlow Condensed','Work Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;} .ds-stamp--pending{border-style:dashed;background:var(--fo-surface);color:var(--fo-warning);} .ds-stamp--shipped{background:var(--fo-surface);color:var(--fo-ink);} .ds-stamp--delivered{background:var(--fo-success-tint);color:var(--fo-success);} .ds-stamp--cancelled{background:var(--fo-danger-tint);color:var(--fo-danger);} .ds-stamp--low{background:var(--fo-warning-tint);color:var(--fo-warning);} .ds-row{display:flex;gap:8px;flex-wrap:wrap;} .ds-sml{width:360px;border:1px solid var(--fo-line-soft);border-radius:6px;background:var(--fo-surface);font-family:'Work Sans',sans-serif;} .ds-sml-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 18px;border-bottom:1px solid var(--fo-line-soft);} .ds-sml-h h2{margin:0;font-size:15px;font-weight:600;color:var(--fo-ink);} .ds-sml-h p{margin:0;font-size:13px;color:var(--fo-muted);} .ds-sml ul{list-style:none;margin:0;padding:0;} .ds-sml li{display:flex;align-items:center;gap:10px;min-height:44px;padding:10px 16px;border-top:1px solid var(--fo-line-soft);} .ds-sml li:first-child{border-top:0;} .ds-sml li:hover{background:var(--fo-row-hover);} .ds-sml .ds-stamp{min-width:96px;justify-content:center;} .ds-m{position:relative;flex:1;height:1px;background:var(--fo-line-soft);} .ds-m i{position:absolute;inset:0 auto 0 0;min-width:2px;} .ds-sml b{min-width:40px;text-align:right;font:600 18px/1 'Barlow Condensed',sans-serif;color:var(--fo-ink);font-variant-numeric:tabular-nums;} .ds-sml s{width:4.5ch;text-align:right;text-decoration:none;font-size:12.5px;color:var(--fo-muted);font-variant-numeric:tabular-nums;}"
+    },
+    {
+      "name": "Portal Navigation",
+      "kind": "nav",
+      "refersTo": "portal-sidebar",
+      "description": "Ink sidebar: kraft role stamp, 40px items; active is a paper-tinted fill with white semibold text, no red marker or side bar.",
+      "html": "<nav class=\"ds-side\"><div class=\"ds-side-role\"><span class=\"ds-side-stamp\">Admin</span><span>FlipOne Admin</span></div><a class=\"ds-side-item is-active\" aria-current=\"page\" href=\"#\">Dashboard</a><a class=\"ds-side-item\" href=\"#\">Users</a><a class=\"ds-side-item\" href=\"#\">Sellers</a><a class=\"ds-side-item\" href=\"#\">Orders</a></nav>",
+      "css": ":host{--fo-paper:#F5F4F0;--fo-paper-2:#ECEAE4;--fo-surface:#FFFFFF;--fo-ink:#17150F;--fo-ink-2:#3B372F;--fo-ink-hover:#38342B;--fo-muted:#5C584F;--fo-line:#8A857B;--fo-line-mid:#C4C2BC;--fo-line-soft:#DEDCD6;--fo-kraft:#CDAE80;--fo-red:#D3261C;--fo-red-hover:#B01E15;--fo-success:#1E7445;--fo-success-tint:#EAF4EE;--fo-warning:#A15C00;--fo-warning-tint:#FBF1E2;--fo-danger:#9E1B32;--fo-danger-tint:#FAECEF;--fo-head:#FAF9F6;--fo-row-hover:#FAF8F3;--ease-out-quint:cubic-bezier(0.22,1,0.36,1);} .ds-side{width:240px;display:flex;flex-direction:column;gap:2px;padding:18px 12px;background:var(--fo-ink);color:#E9E5DC;font-family:'Work Sans',sans-serif;} .ds-side-role{display:flex;align-items:center;gap:8px;padding:0 10px 18px;margin-bottom:12px;border-bottom:1px solid rgb(245 244 240/.12);font-size:13px;color:#B9B3A6;} .ds-side-stamp{display:inline-flex;align-items:center;height:22px;padding:1px 8px 0;border:1.5px solid var(--fo-kraft);border-radius:4px;color:var(--fo-kraft);font:600 12px/1 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;} .ds-side-item{display:flex;align-items:center;height:40px;padding:0 10px;border-radius:6px;font-size:14.5px;font-weight:500;color:#D9D4C9;text-decoration:none;transition:background-color 150ms,color 150ms;} .ds-side-item:hover{background:rgb(245 244 240/.08);color:#fff;} .ds-side-item.is-active{background:rgb(245 244 240/.14);font-weight:600;color:#fff;} .ds-side-item:focus-visible{outline:2px solid var(--fo-paper);outline-offset:2px;}"
+    },
+    {
+      "name": "Toast",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "Bottom-centre ink row; status by icon shape and tone; quiet action; no close button; errors stay 6s.",
+      "html": "<div class=\"ds-toast\" role=\"status\"><span class=\"ds-toast-i\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/></svg></span><div class=\"ds-toast-c\"><div class=\"ds-toast-t\">Added to cart</div><div class=\"ds-toast-d\">Gold Clover Bracelet Stack</div></div><button class=\"ds-toast-a\">View cart</button></div>",
+      "css": ":host{--fo-paper:#F5F4F0;--fo-paper-2:#ECEAE4;--fo-surface:#FFFFFF;--fo-ink:#17150F;--fo-ink-2:#3B372F;--fo-ink-hover:#38342B;--fo-muted:#5C584F;--fo-line:#8A857B;--fo-line-mid:#C4C2BC;--fo-line-soft:#DEDCD6;--fo-kraft:#CDAE80;--fo-red:#D3261C;--fo-red-hover:#B01E15;--fo-success:#1E7445;--fo-success-tint:#EAF4EE;--fo-warning:#A15C00;--fo-warning-tint:#FBF1E2;--fo-danger:#9E1B32;--fo-danger-tint:#FAECEF;--fo-head:#FAF9F6;--fo-row-hover:#FAF8F3;--ease-out-quint:cubic-bezier(0.22,1,0.36,1);} .ds-toast{--tone:#5FBF8A;width:440px;box-sizing:border-box;display:flex;align-items:center;gap:12px;min-height:52px;padding:12px 14px 12px 16px;background:#17150F;color:#F5F4F0;border:1px solid #2E2A22;border-radius:6px;box-shadow:0 2px 4px rgb(23 21 15/.18),0 8px 12px -6px rgb(23 21 15/.32);font-family:'Work Sans',sans-serif;} .ds-toast-i{display:grid;color:var(--tone);} .ds-toast-c{flex:1;min-width:0;display:grid;gap:2px;} .ds-toast-t{font-size:14px;font-weight:600;line-height:1.35;} .ds-toast-d{font-size:13px;line-height:1.4;color:#C9C3B8;} .ds-toast-a{height:30px;padding:0 12px;border:1px solid #4A453A;border-radius:4px;background:transparent;color:#F5F4F0;font:600 13px 'Work Sans',sans-serif;cursor:pointer;transition:background-color 150ms,border-color 150ms;} .ds-toast-a:hover{background:#2E2A22;border-color:#6B6557;} .ds-toast-a:focus-visible{outline:2px solid #CDAE80;outline-offset:2px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Swing Tag",
+    "overview": "Every product in FlipOne is printed like the garment tag an Indian shopper already reads in a shop: a white card hung on a paper ground, a dashed tear line, a boxed MRP in red condensed numerals with \"(incl. of all taxes)\" underneath, a thin category stamp, the seller's name and a stock line. The rest of the system is cut from the same stationery. Statuses are rubber stamps, the category band is kraft paper, and the seller and admin portals are the shop's ledger: an ink sidebar, white panels, 1px rules and tabular figures.\n\nThe system is dense and practical, built for work. Storefront grids pack 5 tags across at 1440px with a 2x2 feature tag first. Portal screens are tables of stamped rows with one red action. Surfaces are flat white on warm off-white paper. Depth comes from 1px rules and a single tight tag shadow that appears on hover, never from soft glows. Colour is spent sparingly: ink carries most of the information, tag red marks the one thing to do and what it costs, and kraft appears only as a band.\n\nThe build refuses the generic white-card marketplace (blue accents, rounded pill cards, star ratings, discount badges) and the giant empty hero. The first viewport is header, a kraft band of at most about 220px, then products.",
+    "keyCharacteristics": [
+      "Paper ground (#F5F4F0), white tag and panel surfaces, warm near-black ink.",
+      "Two type voices: Work Sans for reading, Barlow Condensed caps for stamps, labels, MRP and every big figure.",
+      "Tag red is reserved: actions, MRP figures, the cart count. Nothing else.",
+      "Status is always a bordered stamp chip; PENDING is dashed.",
+      "Small, crisp radii (4px stamps, 6px controls and tags), 1px rules, blur never above 12px.",
+      "Desktop only, 1024 to 1920px, content capped near 1600px."
+    ],
+    "rules": [
+      {
+        "name": "The Price-Tag Red Rule",
+        "body": "Tag red marks actions (primary buttons, the cart count) and MRP prices only. It is never a chart series, marker, dot, active-nav indicator, status or decoration. Cancelled is oxblood, not red. One red button per view.",
+        "section": "colors"
+      },
+      {
+        "name": "The Kraft Band Rule",
+        "body": "Kraft is a band, never a tint for cards, buttons or text backgrounds inside white surfaces.",
+        "section": "colors"
+      },
+      {
+        "name": "The Chart Ink Order Rule",
+        "body": "Chart series run ink, Control Line grey, Kraft Mark, Ledger Green, Amber Ink, Muted Ink, in that order. Gridlines are chart-grid; axes are Control Line.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Figures Rule",
+        "body": "Every price, count, date and id uses tabular lining figures. Product prices are the MRP block; every other amount is plain ₹ with Indian grouping (₹38,42,600) in tabular figures.",
+        "section": "typography"
+      },
+      {
+        "name": "The 12px Floor Rule",
+        "body": "Nothing functional is set under 12px.",
+        "section": "typography"
+      },
+      {
+        "name": "The 12px Blur Ceiling Rule",
+        "body": "No shadow blur exceeds 12px. No glows, gradients, glass or backdrop blur anywhere, including chart marks and areas (areas are a solid 8% fill).",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep tag red to the one main action per view, MRP figures and the cart count.",
+      "Do show every order status as a stamp (dashed PENDING, ink SHIPPED, checked DELIVERED, oxblood CANCELLED) and summarise statuses with the status meter list.",
+      "Do apply one low-stock rule everywhere: 5 or fewer left reads \"ONLY N LEFT\".",
+      "Do state a figure's qualifier whenever it differs from the plain reading (\"incl. 1 cancelled\", \"excl. cancelled\", \"last 30 days\").",
+      "Do set prices, counts, dates and ids in tabular figures; product prices in the MRP block.",
+      "Do give every interactive element a visible hover and the 2px ink focus ring at 2px offset.",
+      "Do use Lucide line icons at stroke 1.75, 16 to 20px.",
+      "Do keep motion to 150 to 200ms with the ease-out-quint curve, one authored moment per view, collapsed under reduced motion.",
+      "Do cap content near 1600px with at least 24px gutters, and let wide tables scroll inside their panel."
+    ],
+    "donts": [
+      "Don't use tag red for chart series, markers, dots, statuses, active nav or decoration.",
+      "Don't draw status donuts or pies; use the status meter list.",
+      "Don't put a thick coloured border on one side of a card, row, toast or nav item.",
+      "Don't use shadows with more than 12px blur, gradients, glows, glass or backdrop blur.",
+      "Don't nest cards or panels inside panels.",
+      "Don't use kraft outside bands, or text lighter than Muted Ink.",
+      "Don't add a floating close button to toasts.",
+      "Don't invent figures, ratings, discounts or delivery promises to fill a surface."
+    ]
+  }
+}

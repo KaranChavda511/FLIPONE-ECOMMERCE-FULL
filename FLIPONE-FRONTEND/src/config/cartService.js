@@ -1,96 +1,30 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 
-const BASE_URL = import.meta.env.VITE_BASE_URL;
+// Cart API. The user token is attached by apiClient; errors propagate to the caller.
 
-// 🔐 Auth header builder
-const authHeader = (token) => ({
-  headers: {
-    Authorization: token ? `Bearer ${token}` : "",
-  },
-  withCredentials: true,
-});
-
-const getCart = async (token) => {
-  try {
-    const res = await axios.get(`${BASE_URL}/api/cart/view`, authHeader(token));
-    console.log("Cart items fetched:", res.data.data?.items); // log cart items
-    return res.data.data?.items || []; // Return empty array if no items
-  } catch (error) {
-    console.error("Error fetching cart:", error.response?.data || error.message);
-    return []; // Return empty array in case of an error
-  }
+/** Cart items as returned by the API: { ItemId, product, requestedQuantity, availableQuantity, ... } */
+const getCart = async () => {
+  const { data } = await apiClient.get("/api/cart/view");
+  return data.data?.items ?? [];
 };
 
-// const addToCart = async (item, token) => {
-  
-//   try {
-//     const res = await axios.post(
-//       `${BASE_URL}/api/cart/addIn`,
-//       { productId: item._id, quantity: 1 },
-//       authHeader(token)
-//     );
-//     console.log("Item added to cart:", res.data);
-//     return res.data;
-//   } catch (error) {
-//     console.error("Error adding item to cart:", error.response?.data || error.message);
-//     throw error; // Throw the error for higher level handling
-//   }
-// };
-
-const addToCart = async (item, token) => {
-  try {
-    const availableQuantity = item.availableQuantity || 0; // Get available stock
-    const requestedQuantity = 1; // You can modify this if needed
-
-    if (requestedQuantity > availableQuantity) {
-      // Show a message or handle the error in UI
-      alert(`Only ${availableQuantity} items available in stock.`);
-      return; // Stop further execution
-    }
-
-    const res = await axios.post(
-      `${BASE_URL}/api/cart/addIn`,
-      { productId: item._id, quantity: requestedQuantity },
-      authHeader(token)
-    );
-
-    if (res.data.success) {
-      console.log("Item added to cart:", res.data);
-    } else {
-      console.error("Error adding item to cart:", res.data.error || "Unknown error");
-      alert("Error adding item to cart: " + res.data.message); // Show error message to user
-    }
-
-    return res.data;
-  } catch (error) {
-    console.error("Error adding item to cart:", error.response?.data || error.message);
-    alert("An error occurred while adding the item to the cart.");
-    throw error;
-  }
-};
-const updateCart = async (itemId, newQuantity, token) => {
-  console.log("Updating cart with:", itemId, newQuantity);
-  try {
-    const res = await axios.patch(
-      `${BASE_URL}/api/cart/updateCart/${itemId}`,
-      { quantity: newQuantity },
-      authHeader(token)
-    );
-    console.log("Cart updated:", res.data);
-    return res.data;
-  } catch (error) {
-    console.error("Error updating cart:", error.response?.data || error.message);
-    throw error; // Throw the error for higher level handling
-  }
+const addToCart = async (productId, quantity = 1) => {
+  const { data } = await apiClient.post("/api/cart/addIn", { productId, quantity });
+  return data;
 };
 
-const clearCart = async (token) => {
-  try {
-    await axios.delete(`${BASE_URL}/api/cart/clear`, authHeader(token));
-    console.log("Cart cleared successfully");
-  } catch (error) {
-    console.error("Error clearing cart:", error.response?.data || error.message);
-  }
+const updateCart = async (itemId, quantity) => {
+  const { data } = await apiClient.patch(`/api/cart/updateCart/${itemId}`, { quantity });
+  return data;
 };
 
-export default { getCart, addToCart, updateCart, clearCart };
+const removeItem = async (itemId) => {
+  const { data } = await apiClient.delete(`/api/cart/deleteItems/${itemId}`);
+  return data;
+};
+
+const clearCart = async () => {
+  await apiClient.delete("/api/cart/clear");
+};
+
+export default { getCart, addToCart, updateCart, removeItem, clearCart };

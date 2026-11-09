@@ -1,157 +1,209 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import Admin_Sidebar from "../pages/Admin_Sidebar";
-import Admin_Navbar from "../pages/Admin_Navbar";
-import { MdOutlineDeleteForever } from "react-icons/md";
-import Switcher2 from "../managements/Switcher"; // Make sure the path is correct
+import { useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
+import { toast } from "@/lib/toast";
+import apiClient, { apiErrorMessage } from "../../config/apiClient";
+import { useApiGet } from "../../hooks/useApiGet";
+import { useUrlState } from "../../hooks/useUrlState";
+import { formatDate } from "@/lib/format";
+import {
+  CellText,
+  DataTable,
+  DataTableFooter,
+  DataTableMessage,
+  DataTableToolbar,
+  EmptyState,
+  PortalShell,
+} from "@/components/flipone";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import SearchBox from "../components/SearchBox";
+import FilterTabs from "../components/FilterTabs";
+import StatusSwitch from "../components/StatusSwitch";
+import Pager, { RangeText } from "../components/Pager";
+import { AnimatedRow, ErrorRow, SkeletonRows } from "../components/TableBits";
+import { useDebouncedValue } from "../components/useDebouncedValue";
+
+const USERS_PER_PAGE = 10;
+const COLUMNS = 6;
+const STATUSES = ["all", "active", "inactive"];
 
 const User_Manage = () => {
-  const { adminInfo } = useSelector((state) => state.admin);
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage] = useState(10); // Set how many users per page
-  const navigate = useNavigate();
-  const BASE_URL = import.meta.env.VITE_BASE_URL;
+  // View state lives in the URL (?q=&status=&page=) so Back/Forward, reloads and shared links keep it.
+  const [, setSearchParams] = useSearchParams();
+  const [pageParam, setCurrentPage] = useUrlState("page", 1, "number");
+  const [q, setQ] = useUrlState("q", "", "string", { resets: ["page"] });
+  const [statusParam, setFilter] = useUrlState("status", "all", "string", { resets: ["page"] });
+  const currentPage = Math.max(1, Math.floor(pageParam));
+  const filter = STATUSES.includes(statusParam) ? statusParam : "all";
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await axios.get(`${BASE_URL}/api/admin/allUsers`, {
-          headers: {
-            Authorization: `Bearer ${adminInfo?.token}`,
-          },
-        });
-        setUsers(response.data.users);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // The box keeps its own copy so typing never waits on the router (it updates the URL in a transition);
+  // a URL change from elsewhere (Back/Forward, Clear filters) is copied back in.
+  const [query, setQuery] = useState(q);
+  const [shownQ, setShownQ] = useState(q);
+  if (q !== shownQ) {
+    setShownQ(q);
+    setQuery(q);
+  }
+  const search = useDebouncedValue(query.trim(), 300);
 
-    if (adminInfo?.token) {
-      fetchUsers();
-    } else {
-      setLoading(false);
-    }
-  }, [adminInfo]);
+  // The backend searches name and email (?search=); the list itself is not paginated server-side.
+  const { data, loading, error, reload, setData } = useApiGet("/api/admin/allUsers", search ? { search } : undefined);
+  const users = useMemo(() => data?.users ?? [], [data]);
 
-  // Toggle User Active/Inactive
-  const toggleUserStatus = async (id, isActive) => {
-    const confirmToggle = window.confirm(
-      `Are you sure you want to ${isActive ? "deactivate" : "activate"} this user?`
-    );
-    if (!confirmToggle) return;
+  const activeCount = users.filter((u) => u.isActive).length;
+  const filtered = filter === "all" ? users : users.filter((u) => (filter === "active" ? u.isActive : !u.isActive));
+  const totalPages = Math.max(Math.ceil(filtered.length / USERS_PER_PAGE), 1);
+  const page = Math.min(currentPage, totalPages);
+  const currentUsers = filtered.slice((page - 1) * USERS_PER_PAGE, page * USERS_PER_PAGE);
 
+  const toggleUserStatus = async (user) => {
+    const action = user.isActive ? "deactivate" : "activate";
     try {
-      const endpoint = `${BASE_URL}/api/admin/users/${id}/toggle-status`;
-
-      await axios.patch(endpoint, {}, {
-        headers: {
-          Authorization: `Bearer ${adminInfo?.token}`,
-        },
-      });
-
-      // Update UI
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user._id === id ? { ...user, isActive: !isActive } : user
-        )
-      );
-    } catch (error) {
-      console.error("Error updating user status:", error);
-      alert("Failed to update user status.");
+      await apiClient.patch(`/api/admin/users/${user._id}/toggle-status`);
+      setData((prev) => ({
+        ...prev,
+        users: prev.users.map((u) => (u._id === user._id ? { ...u, isActive: !u.isActive } : u)),
+      }));
+      toast.success(`User ${action}d`, { description: user.name });
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Failed to update user status"));
     }
   };
 
-  // Pagination Logic
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const changeQuery = (value) => {
+    setQuery(value);
+    setQ(value);
+  };
+  // One URL update: separate setters in one handler would each start from the same URL and undo each other.
+  const clearFilters = () => {
+    setQuery("");
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        ["q", "status", "page"].forEach((key) => next.delete(key));
+        return next;
+      },
+      { replace: true, preventScrollReset: true }
+    );
+  };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <div className="w-64 fixed h-full bg-white shadow z-10">
-        <Admin_Sidebar />
-      </div>
-
-      <div className="flex-1 ml-64">
-        <div className="sticky top-0 z-20 bg-white shadow">
-          <Admin_Navbar />
-        </div>
-
-        <div className="p-6 pt-24">
-          <h1 className="text-2xl font-bold mb-6 text-gray-800">User Management</h1>
-
+    <PortalShell
+      variant="admin"
+      title="Users"
+      subtitle="Shopper accounts. Turning an account off stops it from logging in."
+      actions={<SearchBox value={query} onChange={changeQuery} placeholder="Name or email" label="Search users" />}
+    >
+      <DataTable
+        label="Users"
+        toolbar={
+          <DataTableToolbar>
+            <h2 className="sr-only">Users</h2>
+            <FilterTabs
+              label="Filter users by status"
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: "all", label: "All", count: users.length },
+                { value: "active", label: "Active", count: activeCount },
+                { value: "inactive", label: "Inactive", count: users.length - activeCount },
+              ]}
+            />
+          </DataTableToolbar>
+        }
+        footer={
+          !loading &&
+          !error &&
+          filtered.length > 0 && (
+            <DataTableFooter>
+              <RangeText page={page} perPage={USERS_PER_PAGE} total={filtered.length} noun="users" />
+              <Pager page={page} totalPages={totalPages} onChange={setCurrentPage} label="User pages" />
+            </DataTableFooter>
+          )
+        }
+      >
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Mobile</TableHead>
+            <TableHead>Joined</TableHead>
+            <TableHead>Account</TableHead>
+            <TableHead>
+              <span className="sr-only">Details</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {loading ? (
-            <p className="text-gray-500">Loading users...</p>
+            <SkeletonRows rows={8} cols={COLUMNS} />
+          ) : error ? (
+            <ErrorRow colSpan={COLUMNS} title="Could not load users" message={error} onRetry={reload} />
+          ) : filtered.length === 0 ? (
+            <DataTableMessage colSpan={COLUMNS}>
+              <EmptyState
+                variant="plain"
+                illustration="results"
+                headingLevel="h3"
+                title={users.length === 0 && !search ? "No shoppers yet" : "No users match"}
+                body={
+                  users.length === 0 && !search
+                    ? "Shopper accounts appear here once people sign up."
+                    : "Try another name or email, or show all accounts."
+                }
+                action={
+                  (search || filter !== "all") && (
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      Clear filters
+                    </Button>
+                  )
+                }
+              />
+            </DataTableMessage>
           ) : (
-            <div className="overflow-x-auto shadow rounded-lg border border-gray-200 bg-white">
-              <table className="min-w-full text-sm text-left">
-                <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
-                  <tr>
-                    <th className="px-6 py-3">Name</th>
-                    <th className="px-6 py-3">Email</th>
-                    <th className="px-6 py-3">Role</th>
-                    <th className="px-6 py-3">Status</th>
-                    {/* <th className="px-6 py-3">Actions</th> */}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {currentUsers.map((user) => (
-                    <tr key={user._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                        {user.name}
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">{user.email}</td>
-                      <td className="px-6 py-4 capitalize">{user.role}</td>
-                      <td className="px-6 py-4">
-                        <Switcher2
-                          isChecked={user.isActive}
-                          onToggle={() => toggleUserStatus(user._id, user.isActive)}
-                        />
-                      </td>
-                      <td className="px-6 py-4 space-x-2">
-                        <button
-                          className="text-red-600 hover:underline cursor-pointer"
-                          onClick={() => toggleUserStatus(user._id, user.isActive)}
-                          title={user.isActive ? "Deactivate" : "Activate"}
-                        >
-                          {/* <MdOutlineDeleteForever className="h-4 w-4" /> */}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            currentUsers.map((user, index) => (
+              <AnimatedRow key={user._id} index={index}>
+                <TableCell>
+                  <Link
+                    to={`/admin/allUsers/${user._id}`}
+                    className="block max-w-[22ch] truncate font-medium text-ink underline-offset-[3px] hover:underline"
+                    title={user.name}
+                  >
+                    {user.name}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <CellText max="30ch" className="text-ink-2">
+                    {user.email}
+                  </CellText>
+                </TableCell>
+                <TableCell className="text-ink-2 tabular">{user.mobile || "—"}</TableCell>
+                <TableCell className="text-muted-foreground tabular">{formatDate(user.createdAt)}</TableCell>
+                <TableCell>
+                  <StatusSwitch
+                    kind="user"
+                    name={user.name}
+                    active={user.isActive}
+                    onConfirm={() => toggleUserStatus(user)}
+                  />
+                </TableCell>
+                <TableCell className="w-10 pr-2">
+                  <Link
+                    to={`/admin/allUsers/${user._id}`}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    className="grid size-[30px] place-items-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-paper-2 hover:text-ink"
+                  >
+                    <ChevronRight className="size-4" strokeWidth={1.75} />
+                  </Link>
+                </TableCell>
+              </AnimatedRow>
+            ))
           )}
-
-          {/* Pagination Controls */}
-          <div className="flex justify-center items-center mt-6">
-            <button
-              onClick={() => paginate(currentPage - 1)}
-              className="px-4 py-2 border border-gray-300 rounded-l-lg bg-white hover:bg-gray-100"
-              disabled={currentPage === 1}
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => paginate(currentPage + 1)}
-              className="px-4 py-2 border border-gray-300 rounded-r-lg bg-white hover:bg-gray-100"
-              disabled={currentPage === Math.ceil(users.length / usersPerPage)}
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        </TableBody>
+      </DataTable>
+    </PortalShell>
   );
 };
 

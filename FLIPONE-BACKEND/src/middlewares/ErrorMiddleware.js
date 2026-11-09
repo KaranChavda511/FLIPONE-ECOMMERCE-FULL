@@ -1,67 +1,59 @@
-// src/middlewares/ErrorMiddleware.js
-import Joi from "joi";
-import multer from "multer";
-import logger from "../services/logger.js";
+import mongoose from 'mongoose';
+import multer from 'multer';
+import logger from '../services/logger.js';
+import { discardUploads } from '../utils/FileUploads.js';
 
+const MULTER_MESSAGES = {
+  LIMIT_FILE_SIZE: 'File size too large. Please upload a file less than 5MB',
+  LIMIT_FILE_COUNT: 'Too many files. Maximum 5 images allowed',
+  LIMIT_UNEXPECTED_FILE: 'Unexpected file field or too many files',
+};
 
-// Middleware to handle 404 Not Found errors
-export const notFound = (req, res, next) => {
-  const error = new Error(`Not Found - ${req.originalUrl}`);
+export const notFound = (req, res) => {
   res.status(404).json({
     success: false,
     message: `The page or resource is Not Found - ${req.originalUrl}`,
   });
-  
 };
 
+// Express 5 forwards rejected promises from async handlers here automatically.
+// eslint-disable-next-line no-unused-vars -- Express needs the 4-argument signature
+export const errorHandler = async (err, req, res, next) => {
+  // Don't keep files from a request that failed.
+  if (req.file || req.files?.length) await discardUploads(req.files ?? [req.file]);
 
-//  Global error handler middleware
-export const errorHandler = (err, req, res, next) => {
-  
-  logger.error(`Error: ${err.message}`, { stack: err.stack });
-
- 
-
-  // Handle file upload errors
   if (err instanceof multer.MulterError) {
-
-    if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({
-        success: false,
-        message: "File size too large. Please upload a file less than 5MB",
-      });
-    }else if (err.code === "LIMIT_UNEXPECTED_FILE") {
-      return res.status(400).json({
-        success: false,
-        message: "Too many files to upload. Please upload a single file",
-      });
-    }else if (err.code === "LIMIT_FILE_COUNT") {
-      return res.status(400).json({
-        success: false,
-        message: "Too many files to upload. Please upload a single file",
-      });
-    }
-
+    return res.status(400).json({ success: false, message: MULTER_MESSAGES[err.code] ?? 'Error while uploading files' });
+  }
+  if (err instanceof mongoose.Error.CastError) {
+    return res.status(400).json({ success: false, message: `Invalid ${err.path}` });
+  }
+  if (err instanceof mongoose.Error.ValidationError) {
     return res.status(400).json({
       success: false,
-      message: "Error while uploading files",
-      error: err.message,
+      message: 'Validation failed',
+      errors: Object.values(err.errors).map((e) => ({ field: e.path, message: e.message })),
     });
   }
-
-   // Handle duplicate key errors
-   if (err.code === 11000) {
-    const field = Object.keys(err.keyPattern)[0];
-    return res.status(409).json({
-      success: false,
-      message: `${field} already exists`
-    });
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyPattern ?? {})[0] ?? 'value';
+    return res.status(409).json({ success: false, message: `${field} already exists` });
   }
-  
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ success: false, message: 'Malformed JSON body' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ success: false, message: 'Request body too large' });
+  }
 
-  // Handle other errors
-  res.status(err.statusCode || 500).json({
+  const status = err.statusCode || err.status || 500;
+  if (status >= 500) {
+    logger.error(`${req.method} ${req.originalUrl} failed: ${err.message}`, { stack: err.stack });
+  }
+  // Never echo internal error text to the client for 5xx, unless the error was written for the client (expose).
+  res.status(status).json({
     success: false,
-    message: err.message || "Internal Server Error",
+    message: status >= 500 && !err.expose ? 'Internal Server Error' : err.message,
+    ...(err.details && typeof err.details === 'object' ? err.details : {}),
   });
 };

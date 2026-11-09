@@ -1,168 +1,105 @@
-import React, { useState } from "react";
+import { useId } from "react";
 import { useSelector } from "react-redux";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-import Admin_Sidebar from "../pages/Admin_Sidebar";
-import Admin_Navbar from "../pages/Admin_Navbar";
+import { Form, Formik } from "formik";
+import * as Yup from "yup";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/lib/toast";
+import apiClient, { apiErrorMessage } from "../../config/apiClient";
+import { PASSWORD_HINT, STRONG_PASSWORD } from "../../utils/validation";
+import { PortalShell, Stamp } from "@/components/flipone";
+import { Button } from "@/components/ui/button";
+import PasswordField from "../components/PasswordField";
+import { ErrorNotice, Panel } from "../components/Panel";
+
+const EMPTY = { oldPassword: "", newPassword: "", confirmPassword: "" };
+
+// Mirrors the backend rule (Validation.js changePassword): old password filled, a strong new password that
+// differs from the old one, and a matching confirmation.
+const validationSchema = Yup.object({
+  oldPassword: Yup.string().required("Enter your current password"),
+  newPassword: Yup.string()
+    .required("Enter a new password")
+    .matches(STRONG_PASSWORD, PASSWORD_HINT)
+    .notOneOf([Yup.ref("oldPassword")], "New password must be different from the old password"),
+  confirmPassword: Yup.string()
+    .required("Confirm the new password")
+    .oneOf([Yup.ref("newPassword")], "New password and confirm password do not match"),
+});
+
+const Row = ({ label, children }) => (
+  <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 border-line-soft px-[18px] py-3 not-first:border-t">
+    <dt className="label-caps text-[12.5px] leading-6 text-muted-foreground">{label}</dt>
+    <dd className="min-w-0 text-[15px] leading-6 break-words text-ink">{children}</dd>
+  </div>
+);
 
 const Admin_Profile = () => {
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showOld, setShowOld] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [message, setMessage] = useState("");
+  const accountId = useId();
+  const passwordId = useId();
+  const adminInfo = useSelector((state) => state.admin.adminInfo);
+  const adminName = adminInfo?.name || "Admin";
 
-  const token = useSelector((state) => state.admin.adminInfo?.token);
-  const adminName = useSelector((state) => state.admin.adminInfo?.name) || "Admin Mihir";
-
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-
-    const BASE_URL = import.meta.env.VITE_BASE_URL;
-
-    if (!token) {
-      setMessage("Authentication token not found. Please login again.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setMessage("New password and confirm password do not match.");
-      return;
-    }
-
+  const handleChangePassword = async (values, { resetForm, setStatus }) => {
+    setStatus(null);
     try {
-      const response = await fetch(`${BASE_URL}/api/admin/profile/change-password`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          oldPassword,
-          newPassword,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage("Password changed successfully!");
-        setOldPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      } else {
-        setMessage(data.message || "Something went wrong.");
-      }
+      await apiClient.patch("/api/admin/change-password", values);
+      toast.success("Password changed");
+      resetForm({ values: EMPTY });
     } catch (error) {
-      console.error(error);
-      setMessage("Failed to connect to the server.");
+      setStatus(apiErrorMessage(error, "Password change failed."));
     }
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="w-64 fixed h-full bg-white shadow z-10">
-        <Admin_Sidebar />
-      </div>
+    <PortalShell variant="admin" title="Profile" subtitle="Your admin account and password.">
+      <div className="grid max-w-[1080px] items-start gap-[18px] xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <Panel title="Account" titleId={accountId}>
+          <dl>
+            <Row label="Name">{adminName}</Row>
+            {adminInfo?.email && <Row label="Email">{adminInfo.email}</Row>}
+            <Row label="Role">
+              <Stamp variant="neutral">Admin</Stamp>
+            </Row>
+          </dl>
+        </Panel>
 
-      {/* Content */}
-      <div className="flex-1 ml-64 flex flex-col">
-        {/* Navbar */}
-        <div className="sticky top-0 z-20 bg-white shadow">
-          <Admin_Navbar />
-        </div>
-
-        {/* Main section */}
-        <div className="p-8 pt-24 overflow-y-auto">
-          <div className="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Admin Profile</h2>
-
-            <p className="text-gray-600 mb-6">
-              <span className="font-semibold">Name:</span> {adminName}
-            </p>
-
-            <hr className="mb-6" />
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Change Password</h3>
-
-            {message && (
-              <div className="mb-4 p-3 rounded-lg bg-blue-100 text-blue-800 text-sm">
-                {message}
-              </div>
+        <Panel title="Change password" titleId={passwordId} bodyClassName="px-[18px] pt-4 pb-5">
+          <Formik initialValues={EMPTY} validationSchema={validationSchema} onSubmit={handleChangePassword}>
+            {({ isSubmitting, status }) => (
+              <Form noValidate className="grid gap-4">
+                {status && <ErrorNotice title="Password not changed" message={status} />}
+                <PasswordField
+                  name="oldPassword"
+                  label="Current password"
+                  autoComplete="current-password"
+                  required
+                />
+                <PasswordField
+                  name="newPassword"
+                  label="New password"
+                  autoComplete="new-password"
+                  hint={`${PASSWORD_HINT}.`}
+                  required
+                />
+                <PasswordField
+                  name="confirmPassword"
+                  label="Confirm new password"
+                  autoComplete="new-password"
+                  required
+                />
+                <div className="pt-1">
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="animate-spin" aria-hidden="true" />}
+                    {isSubmitting ? "Saving…" : "Change password"}
+                  </Button>
+                </div>
+              </Form>
             )}
-
-            <form onSubmit={handleChangePassword}>
-              <div className="space-y-4">
-                {/* Old Password */}
-                <div className="relative">
-                  <input
-                    type={showOld ? "text" : "password"}
-                    placeholder="Old Password"
-                    value={oldPassword}
-                    onChange={(e) => setOldPassword(e.target.value)}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    required
-                  />
-                  <span
-                    onClick={() => setShowOld(!showOld)}
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-500 cursor-pointer"
-                  >
-                    {showOld ? <FaEyeSlash /> : <FaEye />}
-                  </span>
-                </div>
-
-                {/* New Password */}
-                <div className="relative">
-                  <input
-                    type={showNew ? "text" : "password"}
-                    placeholder="New Password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    required
-                  />
-                  <span
-                    onClick={() => setShowNew(!showNew)}
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-500 cursor-pointer"
-                  >
-                    {showNew ? <FaEyeSlash /> : <FaEye />}
-                  </span>
-                </div>
-
-                {/* Confirm Password */}
-                <div className="relative">
-                  <input
-                    type={showConfirm ? "text" : "password"}
-                    placeholder="Confirm New Password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    required
-                  />
-                  <span
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-500 cursor-pointer"
-                  >
-                    {showConfirm ? <FaEyeSlash /> : <FaEye />}
-                  </span>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition"
-                >
-                  Change Password
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+          </Formik>
+        </Panel>
       </div>
-    </div>
+    </PortalShell>
   );
 };
 
 export default Admin_Profile;
-  

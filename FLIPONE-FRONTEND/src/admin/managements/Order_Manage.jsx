@@ -1,164 +1,223 @@
-// pages/Order_Manage.jsx
-import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import axios from "axios";
-import Admin_Sidebar from "../pages/Admin_Sidebar";
-import Admin_Navbar from "../pages/Admin_Navbar";
-// ...imports remain the same
-import { MdOutlineDeleteForever } from "react-icons/md";
-import Switcher2 from "../managements/Switcher";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useApiGet } from "../../hooks/useApiGet";
+import { useUrlState } from "../../hooks/useUrlState";
+import { imageUrl } from "../../utils/imageUrl";
+import { formatDate, formatInr, formatNumber, shortId } from "@/lib/format";
+import {
+  CellSub,
+  CellText,
+  DataTable,
+  DataTableFooter,
+  DataTableMessage,
+  DataTableToolbar,
+  EmptyState,
+  PortalShell,
+  Stamp,
+} from "@/components/flipone";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import SearchBox from "../components/SearchBox";
+import FilterTabs from "../components/FilterTabs";
+import { AnimatedRow, ErrorRow, SkeletonRows } from "../components/TableBits";
 
+const STATUSES = ["pending", "shipped", "delivered", "cancelled"];
+const COLUMNS = 5;
+const SHIPPING_LABEL = { flat: "Flat rate", pickup: "Local pickup" };
+
+const matchesQuery = (order, q) => {
+  if (!q) return true;
+  const needle = q.toLowerCase().replace(/^#/, "");
+  const haystack = [
+    order._id,
+    order.user?.name,
+    order.user?.email,
+    order.shippingAddress?.city,
+    ...(order.items ?? []).flatMap((item) => [item.name, item.seller?.name]),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(needle);
+};
+
+/**
+ * Read-only order overview. Sellers move their own items through pending → shipped → delivered;
+ * the backend has no admin endpoint to change or delete an order.
+ */
 const Order_Manage = () => {
-  const { adminInfo } = useSelector((state) => state.admin);
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const BASE_URL = import.meta.env.VITE_BASE_URL;
+  const { data, loading, error, reload } = useApiGet("/api/admin/analytics/seller-orders");
+  const orders = useMemo(() => data?.orders ?? [], [data]);
+  // View state lives in the URL (?q=&status=); the dashboard search links here with ?q=.
+  const [, setSearchParams] = useSearchParams();
+  const [q, setQ] = useUrlState("q", "");
+  const [statusParam, setStatus] = useUrlState("status", "all");
+  const status = statusParam === "all" || STATUSES.includes(statusParam) ? statusParam : "all";
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const response = await axios.get(`${BASE_URL}/api/admin/orders`, {
-          headers: {
-            Authorization: `Bearer ${adminInfo?.token}`,
-          },
-        });
-        setOrders(response?.data?.orders ?? []);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (adminInfo?.token) {
-      fetchOrders();
-    } else {
-      setLoading(false);
-    }
-  }, [adminInfo]);
-
-  const toggleOrderStatus = async (id, isShipped) => {
-    const confirmToggle = window.confirm(
-      `Are you sure you want to mark this order as ${isShipped ? "unshipped" : "shipped"}?`
-    );
-    if (!confirmToggle) return;
-
-    try {
-      const endpoint = `${BASE_URL}/api/admin/orders/${id}/toggle-status`;
-      await axios.patch(endpoint, {}, {
-        headers: { Authorization: `Bearer ${adminInfo?.token}` },
-      });
-
-      setOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order._id === id ? { ...order, isShipped: !isShipped } : order
-        )
-      );
-    } catch (error) {
-      console.error("Error updating order status:", error);
-      alert("Failed to update order status.");
-    }
+  // The box keeps its own copy so typing never waits on the router (it updates the URL in a transition);
+  // a URL change from elsewhere (Back/Forward, Clear filters) is copied back in.
+  const [query, setQueryText] = useState(q);
+  const [shownQ, setShownQ] = useState(q);
+  if (q !== shownQ) {
+    setShownQ(q);
+    setQueryText(q);
+  }
+  const setQuery = (value) => {
+    setQueryText(value);
+    setQ(value);
   };
 
-  const deleteOrder = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this order?");
-    if (!confirmDelete) return;
+  const searched = useMemo(() => orders.filter((order) => matchesQuery(order, query.trim())), [orders, query]);
+  const visible = status === "all" ? searched : searched.filter((order) => order.status === status);
 
-    try {
-      const endpoint = `${BASE_URL}/api/admin/orders/${id}/delete`;
-      await axios.delete(endpoint, {
-        headers: { Authorization: `Bearer ${adminInfo?.token}` },
-      });
+  const tabs = [
+    { value: "all", label: "All", count: searched.length },
+    ...STATUSES.map((s) => ({
+      value: s,
+      label: s.charAt(0).toUpperCase() + s.slice(1),
+      count: searched.filter((order) => order.status === s).length,
+    })),
+  ];
 
-      setOrders((prevOrders) => prevOrders.filter((order) => order._id !== id));
-    } catch (error) {
-      console.error("Error deleting order:", error);
-      alert("Failed to delete order.");
-    }
+  // One URL update: separate setters in one handler would each start from the same URL and undo each other.
+  const clearFilters = () => {
+    setQueryText("");
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        ["q", "status"].forEach((key) => next.delete(key));
+        return next;
+      },
+      { replace: true, preventScrollReset: true }
+    );
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <div className="w-64 fixed h-full bg-white shadow z-10">
-        <Admin_Sidebar />
-      </div>
+    <PortalShell
+      variant="admin"
+      title="Orders"
+      subtitle="Read only. Each seller moves their own items from pending to shipped to delivered."
+      actions={
+        <SearchBox value={query} onChange={setQuery} placeholder="Order id, customer, seller" label="Search orders" />
+      }
+    >
 
-      <div className="flex-1 ml-64">
-        <div className="sticky top-0 z-10 bg-white shadow">
-          <Admin_Navbar />
-        </div>
-
-        <div className="p-6 pt-24">
-          <h1 className="text-2xl font-bold mb-6 text-gray-800">Order Management</h1>
-
-          <div className="overflow-x-auto shadow rounded-lg border border-gray-200 bg-white">
-            {loading ? (
-              <p className="p-4">Loading orders...</p>
-            ) : !Array.isArray(orders) || orders.length === 0 ? (
-              <p className="p-4">No orders found.</p>
-            ) : (
-              <table className="min-w-full text-sm text-left">
-                <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
-                  <tr>
-                    <th className="px-6 py-3">Order ID</th>
-                    <th className="px-6 py-3">Product</th>
-                    <th className="px-6 py-3">Customer Name</th>
-                    <th className="px-6 py-3">Total Price</th>
-                    <th className="px-6 py-3">Order Date</th>
-                    <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {orders.map((order) => {
-                    const firstItem = order.items?.[0];
-                    const imageUrl = firstItem?.product?.image || firstItem?.image || null;
-                    return (
-                      <tr key={order._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                          {order._id || "N/A"}
-                        </td>
-                        <td className="px-6 py-4">
-                          {imageUrl ? (
-                            <img src={imageUrl} alt="product" className="w-12 h-12 object-cover rounded" />
-                          ) : (
-                            <span className="text-gray-400 italic">No image</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600">{order.customer?.name || "N/A"}</td>
-                        <td className="px-6 py-4">₹{order.totalPrice?.toFixed(2) || "0.00"}</td>
-                        <td className="px-6 py-4">
-                          {order.orderDate ? new Date(order.orderDate).toLocaleString() : "N/A"}
-                        </td>
-                        <td className="px-6 py-4 flex items-center gap-2">
-                          <Switcher2
-                            isChecked={order.isShipped}
-                            onToggle={() => toggleOrderStatus(order._id, order.isShipped)}
-                          />
-                          <span className={`text-sm ${order.isShipped ? "text-green-600" : "text-yellow-600"}`}>
-                            {order.isShipped ? "Shipped" : "Pending"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            className="text-red-600 hover:underline cursor-pointer"
-                            onClick={() => deleteOrder(order._id)}
-                            title="Delete Order"
-                          >
-                            <MdOutlineDeleteForever className="h-5 w-5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+      <DataTable
+        label="Orders"
+        toolbar={
+          <DataTableToolbar>
+            <h2 className="sr-only">Orders</h2>
+            <FilterTabs label="Filter orders by status" options={tabs} value={status} onChange={setStatus} />
+          </DataTableToolbar>
+        }
+        footer={
+          !loading &&
+          !error &&
+          orders.length > 0 && (
+            <DataTableFooter>
+              <span className="tabular">
+                Showing {formatNumber(visible.length)} of the latest {formatNumber(orders.length)} orders
+              </span>
+            </DataTableFooter>
+          )
+        }
+      >
+        <TableHeader>
+          <TableRow>
+            <TableHead>Order</TableHead>
+            <TableHead>Customer</TableHead>
+            <TableHead>Items · seller · item status</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+            <TableHead>Order status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading ? (
+            <SkeletonRows rows={8} cols={COLUMNS} />
+          ) : error ? (
+            <ErrorRow colSpan={COLUMNS} title="Could not load orders" message={error} onRetry={reload} />
+          ) : orders.length === 0 ? (
+            <DataTableMessage colSpan={COLUMNS}>
+              <EmptyState
+                variant="plain"
+                illustration="orders"
+                headingLevel="h3"
+                title="No orders yet"
+                body="Orders show up here as soon as shoppers check out."
+              />
+            </DataTableMessage>
+          ) : visible.length === 0 ? (
+            <DataTableMessage colSpan={COLUMNS}>
+              <EmptyState
+                variant="plain"
+                illustration="results"
+                headingLevel="h3"
+                title="No orders match"
+                body={query ? `Nothing matches “${query}” with this status.` : "No orders have this status."}
+                action={
+                  <Button variant="outline" size="sm" onClick={clearFilters}>
+                    Clear filters
+                  </Button>
+                }
+              />
+            </DataTableMessage>
+          ) : (
+            visible.map((order, index) => (
+              <AnimatedRow key={order._id} index={index} className="align-top">
+                <TableCell className="align-top">
+                  <span className="font-display text-[14px] font-semibold tracking-[0.06em]" title={order._id}>
+                    {shortId(order._id)}
+                  </span>
+                  {/* the date sits under the id (every order is cash on delivery, so that note said nothing) */}
+                  <CellSub className="tabular">{formatDate(order.createdAt)}</CellSub>
+                </TableCell>
+                <TableCell className="align-top">
+                  <CellText strong>{order.user?.name ?? "Deleted account"}</CellText>
+                  <CellSub>
+                    <CellText max="24ch">{order.user?.email ?? "—"}</CellText>
+                  </CellSub>
+                  {order.shippingAddress?.city && <CellSub>{order.shippingAddress.city}</CellSub>}
+                </TableCell>
+                <TableCell className="py-2 align-top">
+                  <ul className="flex min-w-[360px] flex-col gap-2 xl:min-w-[440px]">
+                    {(order.items ?? []).map((item, i) => (
+                      <li key={item._id ?? i} className="flex items-center gap-2.5">
+                        <img
+                          src={imageUrl(item.image)}
+                          alt=""
+                          loading="lazy"
+                          className="h-[45px] w-9 shrink-0 rounded-[3px] bg-paper-2 object-cover"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <CellText strong max="22ch" className="font-semibold">
+                            {item.name ?? "Removed product"}
+                          </CellText>
+                          <CellSub className="tabular">
+                            {formatNumber(item.quantity)} × {formatInr(item.price)} · {item.seller?.name ?? "Unknown seller"}
+                          </CellSub>
+                        </div>
+                        <Stamp status={item.status ?? "pending"} className="ml-auto" />
+                      </li>
+                    ))}
+                  </ul>
+                </TableCell>
+                <TableCell className="text-right align-top">
+                  <span className="font-semibold tabular">{formatInr(order.totalAmount)}</span>
+                  <CellSub>
+                    {SHIPPING_LABEL[order.shippingMethod] ?? "Delivery"}
+                    {order.shippingFee ? ` ${formatInr(order.shippingFee)}` : ""}
+                  </CellSub>
+                </TableCell>
+                <TableCell className="align-top">
+                  <Stamp status={order.status ?? "pending"} />
+                </TableCell>
+              </AnimatedRow>
+            ))
+          )}
+        </TableBody>
+      </DataTable>
+    </PortalShell>
   );
 };
 
-export default Order_Manage;  
+export default Order_Manage;

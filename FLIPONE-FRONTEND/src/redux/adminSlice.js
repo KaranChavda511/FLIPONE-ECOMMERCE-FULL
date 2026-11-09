@@ -1,47 +1,31 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { loginAdmin as loginAdminAPI } from "../config/Dataservice";
+import apiClient, { apiErrorMessage } from "../config/apiClient";
+
+// Admin session. Persisted by redux-persist (see Store.js).
+const initialState = {
+  adminInfo: null,
+  isAuthenticated: false,
+  loading: false,
+  error: null,
+};
 
 export const loginAdmin = createAsyncThunk(
   "admin/login",
-  async ({ email, password }, thunkAPI) => {
+  async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await loginAdminAPI({ email, password });
-
-      console.log(" ADMIN LOGIN RESPONSE:", response.data);
-
-      // Combine token with admin object
-      const data = {
-        ...response.data.admin,
-        token: response.data.token,
-      };
-
-      // Save admin data in localStorage
-      localStorage.setItem("adminAuth", JSON.stringify(data));
-
-      return data;
+      const { data } = await apiClient.post("/api/admin/login", { email, password });
+      return { ...data.admin, token: data.token };
     } catch (error) {
-      console.error(" ADMIN LOGIN ERROR:", error.response?.data || error.message);
-      return thunkAPI.rejectWithValue(error.response?.data?.message || "Login failed");
+      return rejectWithValue(apiErrorMessage(error, "Login failed"));
     }
   }
 );
 
 const adminSlice = createSlice({
   name: "admin",
-  initialState: {
-    adminInfo: JSON.parse(localStorage.getItem("adminAuth")) || null, // Get data from localStorage
-    isAuthenticated: false,
-    loading: false,
-    error: null,
-  },
+  initialState,
   reducers: {
-    logoutAdmin: (state) => {
-      // Clear admin info and token from localStorage on logout
-      localStorage.removeItem("adminAuth");
-      state.adminInfo = null;
-      state.isAuthenticated = false;
-      state.error = null;
-    },
+    logoutAdmin: () => initialState,
   },
   extraReducers: (builder) => {
     builder

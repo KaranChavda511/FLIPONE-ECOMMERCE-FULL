@@ -1,61 +1,36 @@
-// src/routes/UserRoutes/UserRoutes.js
 import express from 'express';
 import { protect, userProtect } from '../../middlewares/AuthMiddleware.js';
+import { authLimiter } from '../../middlewares/RateLimitMiddleware.js';
+import { validator } from '../../middlewares/ValidationMiddleware.js';
+import { profileImageUpload } from '../../utils/FileUploads.js';
 import {
   userSignup,
   userLogin,
+  verifyEmail,
+  resendVerificationCode,
   getUserProfile,
   updateProfile,
   updateprofilePic,
   changePassword,
   likeProduct,
-  getLikedProducts
+  getLikedProducts,
 } from '../../controllers/UserControllers/UserController.js';
-import { errorHandler } from '../../middlewares/ErrorMiddleware.js';
-import { profileImageUpload } from '../../utils/FileUploads.js';
-import {validator} from '../../middlewares/ValidationMiddleware.js'
-
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes
-// router.use(protect, userProtect,);
+router.post('/signup', authLimiter, validator('userSchemas.signup'), userSignup);
+router.post('/login', authLimiter, validator('userSchemas.login'), userLogin);
+// Email confirmation for new accounts (6-digit code by email).
+router.post('/verify-email', authLimiter, validator('userSchemas.verifyEmail'), verifyEmail);
+router.post('/resend-code', authLimiter, validator('userSchemas.resendCode'), resendVerificationCode);
 
-// Define routes
+router.use(protect, userProtect);
 
-// User Signup
-router.post(
-  "/signup",
-  validator("userSchemas.signup"),
-  userSignup
-);
-
-// User Login
-router.post(
-  "/login",
-  validator("userSchemas.login"),
-  userLogin
-);
-
-router.get('/profile' ,protect, userProtect, getUserProfile);
-router.patch('/profile',protect, userProtect,validator("userSchemas.updateProfile"), updateProfile); 
-router.patch('/profile/picture', 
-  protect, userProtect,
-  profileImageUpload,
-  updateprofilePic
-);
-router.patch(
-  '/profile/password',
-  protect, userProtect,
-  validator("userSchemas.changePasswordSchema"),
-  changePassword
-);
-
-router.post('/is-liked/:productId', protect, userProtect, likeProduct);
-router.get('/likes', protect, userProtect, getLikedProducts);
-
-
-// Global error handler (must be the last middleware)
-router.use(errorHandler);
+router.get('/profile', getUserProfile);
+router.patch('/profile', validator('userSchemas.updateProfile'), updateProfile);
+router.patch('/profile/picture', profileImageUpload, updateprofilePic);
+router.patch('/profile/password', validator('userSchemas.changePasswordSchema'), changePassword);
+router.post('/is-liked/:productId', likeProduct);
+router.get('/likes', getLikedProducts);
 
 export default router;

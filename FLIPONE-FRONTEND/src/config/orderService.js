@@ -1,29 +1,12 @@
-// services/orderService.js
-import axios from "axios";
+import apiClient from "./apiClient";
 
-const BASE_URL = import.meta.env.VITE_BASE_URL;
-
-export const createOrder = async (orderData, token) => {
-  const response = await axios.post(`${BASE_URL}/api/order/checkout`, orderData, {
-    headers: {
-      Authorization: `Bearer ${token}`, 
-      "Content-Type": "application/json",
-    },
-  });
-  return response.data; 
+/** shippingAddress: { street, city, state, postalCode }; shippingMethod: "flat" | "pickup" (the server sets the fee). */
+export const createOrder = async (shippingAddress, shippingMethod = "flat") => {
+  const { data } = await apiClient.post("/api/order/checkout", { shippingAddress, shippingMethod });
+  return data;
 };
 
-
-export const getOrderHistory = async (token) => {
-  try {
-    const response = await axios.get(`${BASE_URL}/api/order/orderHistory`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return response.data;
-  } catch (err) {
-    console.error('Error fetching order history:', err);
-    throw err; 
-  }
+export const getOrderHistory = async () => {
+  const { data } = await apiClient.get("/api/order/orderHistory");
+  return data;
 };

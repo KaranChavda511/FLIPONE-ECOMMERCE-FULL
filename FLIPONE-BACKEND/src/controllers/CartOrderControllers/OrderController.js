@@ -1,189 +1,138 @@
-// src/controllers/CartOrderControllers/OrderController.js
-import mongoose from 'mongoose';
-import Order from '../../models/Order.js';
+import Order, { SHIPPING_FEES } from '../../models/Order.js';
 import Cart from '../../models/Cart.js';
 import Product from '../../models/Product.js';
+import { HttpError, isValidId } from '../../utils/helpers.js';
 import logger from '../../services/logger.js';
 
-const orderControllerLogger = logger.child({ label: '/OrderController/OrderController.js' });
+const orderLogger = logger.child({ label: 'controllers/OrderController.js' });
 
-// Constants
-const ORDER_STATUS = {
-  PENDING: 'pending',
-  CANCELLED: 'cancelled'
-};
-// Process Order Without Transactions
-const processOrder = async (userId, shippingAddress) => {
-  try {
-    // Get and validate cart
-    const cart = await Cart.findOne({ user: userId })
-      .populate({
-        path: 'items.product',
-        select: 'name price stock isActive seller images',
-        match: { isActive: true }
-      });
+/** Gives stock back for reserved [{ productId, quantity }]. */
+const releaseStock = (reserved) =>
+  reserved.length
+    ? Product.bulkWrite(
+        reserved.map(({ productId, quantity }) => ({
+          updateOne: { filter: { _id: productId }, update: { $inc: { stock: quantity } } },
+        })),
+      )
+    : null;
 
-    if (!cart?.items?.length) {
-      throw new Error('Your cart is empty');
+/**
+ * Reserves stock with a conditional decrement per item ({ stock: { $gte: qty } }), so two buyers can't
+ * both take the last unit. The old code read stock, then blindly $inc'd it, which could go negative.
+ * If any item can't be reserved, everything reserved so far is given back.
+ * (Works on a standalone MongoDB too, unlike a multi-document transaction.)
+ */
+const reserveStock = async (lines) => {
+  const reserved = [];
+  for (const line of lines) {
+    const updated = await Product.findOneAndUpdate(
+      { _id: line.productId, isActive: true, stock: { $gte: line.quantity } },
+      { $inc: { stock: -line.quantity } },
+      { returnDocument: 'after', projection: { _id: 1 } },
+    );
+    if (!updated) {
+      await releaseStock(reserved);
+      throw new HttpError(409, `${line.name} is out of stock`);
     }
+    reserved.push(line);
+  }
+  return reserved;
+};
 
-    // Prepare order items and stock updates
-    const [orderItems, stockUpdates] = cart.items.reduce((acc, item) => {
-      const product = item.product;
-      
-      if (!product || product.stock < item.quantity) {
-        throw new Error(`${product?.name || 'Product'} is out of stock`);
-      }
+export const createOrder = async (req, res) => {
+  const userId = req.account._id;
+  const cart = await Cart.findOne({ user: userId })
+    .populate('items.product', 'name price stock isActive seller images')
+    .lean();
 
-      acc[0].push({
-        productId: product._id,
-        name: product.name,
-        price: product.price,
-        quantity: item.quantity,
-        seller: product.seller,
-        image: product.images || [],
-      });
+  if (!cart?.items?.length) throw new HttpError(400, 'Your cart is empty');
 
-      acc[1].push({
-        updateOne: {
-          filter: { _id: product._id },
-          update: { $inc: { stock: -item.quantity } }
-        }
-      });
+  const lines = cart.items.map((item) => {
+    const { product } = item;
+    if (!product?.isActive) throw new HttpError(409, 'A product in your cart is no longer available');
+    return {
+      productId: product._id,
+      name: product.name,
+      price: product.price,
+      quantity: item.quantity,
+      seller: product.seller,
+      image: product.images ?? [],
+    };
+  });
 
-      return acc;
-    }, [[], []]);
+  const reserved = await reserveStock(lines);
 
-    // Create order
-    const order = await Order.create({
+  const { shippingAddress, shippingMethod } = req.body;
+  const shippingFee = SHIPPING_FEES[shippingMethod];
+  const itemsTotal = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
+
+  let order;
+  try {
+    order = await Order.create({
       user: userId,
-      items: orderItems,
-      totalAmount: orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+      items: lines,
+      totalAmount: itemsTotal + shippingFee,
       shippingAddress,
-      status: ORDER_STATUS.PENDING
+      shippingMethod,
+      shippingFee,
     });
-
-    // Update stock and clear cart (non-transactional)
-    await Product.bulkWrite(stockUpdates);
-    await Cart.updateOne({ user: userId }, { $set: { items: [] } });
-
-    return order;
-
   } catch (error) {
+    await releaseStock(reserved);
     throw error;
   }
+
+  await Cart.updateOne({ user: userId }, { $set: { items: [] } });
+  orderLogger.info(`Order ${order._id} placed by user ${userId}`);
+
+  res.status(201).json({
+    success: true,
+    order: {
+      OrderId: order._id,
+      totalAmount: order.totalAmount,
+      shippingFee: order.shippingFee,
+      status: order.status,
+      items: order.items.map(({ name, quantity, price, image }) => ({ name, quantity, price, image })),
+    },
+  });
 };
 
-// Create Order (Updated)
-export const createOrder = async (req, res) => {
-  try {
-    const order = await processOrder(req.account.id, req.validatedData.shippingAddress);
-    
-    res.status(201).json({
-      success: true,
-      order: {
-        OrderId: order._id,
-        totalAmount: order.totalAmount,
-        status: order.status,
-        items: order.items.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          image: item.image,
-        }))
-      }
-    });
-
-  } catch (error) {
-    orderControllerLogger.error(`Order Error: ${error.message}`);
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-// Get Order History
 export const getOrderHistory = async (req, res) => {
-  try {
-    const orders = await Order.find({ 
-      user: req.account.id ,
-      status: { $ne: ORDER_STATUS.CANCELLED } 
-    })
-      .sort('-createdAt')
-      .lean();
+  const orders = await Order.find({ user: req.account._id, status: { $ne: 'cancelled' } })
+    .sort('-createdAt')
+    .lean();
 
-    res.json({
-      success: true,
-      orders: orders.map(order => ({
-        orderId: order._id,
-        products: order.items.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          image: item.image
-        })),
-        totalAmount: order.totalAmount,
-        status: order.status,
-        date: order.createdAt
-      }))
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve orders'
-    });
-  }
+  res.json({
+    success: true,
+    orders: orders.map((order) => ({
+      orderId: order._id,
+      products: order.items.map(({ name, quantity, price, image, status }) => ({ name, quantity, price, image, status })),
+      totalAmount: order.totalAmount,
+      shippingFee: order.shippingFee ?? 0,
+      status: order.status,
+      shippingAddress: order.shippingAddress,
+      date: order.createdAt,
+    })),
+  });
 };
 
-// Cancel Order (Simplified)
 export const cancelOrder = async (req, res) => {
-  try {
-    const order = await Order.findOne({
+  if (!isValidId(req.params.id)) throw new HttpError(400, 'Invalid order id');
+
+  // Cancellable only while nothing has shipped; flipping the status atomically stops a double restock.
+  const order = await Order.findOneAndUpdate(
+    {
       _id: req.params.id,
-      user: req.account.id,
-      status: ORDER_STATUS.PENDING
-    });
+      user: req.account._id,
+      status: 'pending',
+      items: { $not: { $elemMatch: { status: { $ne: 'pending' } } } },
+    },
+    { $set: { status: 'cancelled', 'items.$[].status': 'cancelled' } },
+    { returnDocument: 'after' },
+  );
+  if (!order) throw new HttpError(400, 'Order not found, or it can no longer be cancelled');
 
-    if (!order) throw new Error('Order not found or Not in the pending state ');
-     
-    if (order.status === ORDER_STATUS.CANCELLED) {
-      return res.status(400).json({
-        success: false,
-        message: 'Order already cancelled'
-      });
-    }
-    if (order.status !== ORDER_STATUS.PENDING) {
-      return res.status(400).json({
-        success: false,
-        message: 'Order cannot be cancelled'
-      });
-    }
- 
- // Restock only items with valid productId
- const bulkOps = order.items
- .filter(item => item.productId)
- .map(item => ({
-   updateOne: {
-     filter: { _id: item.productId },
-     update: { $inc: { stock: item.quantity } }
-   }
- }));
+  await releaseStock(order.items.filter((item) => item.productId));
+  orderLogger.info(`Order ${order._id} cancelled by user ${req.account._id}`);
 
-if (bulkOps.length > 0) {
- await Product.bulkWrite(bulkOps);
-}
-
-    order.status = ORDER_STATUS.CANCELLED;
-    await order.save();
-
-    res.json({ success: true, message: 'Order cancelled' });
-
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
+  res.json({ success: true, message: 'Order cancelled' });
 };

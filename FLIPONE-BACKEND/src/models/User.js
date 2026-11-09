@@ -1,48 +1,25 @@
-
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import passwordPlugin from './plugins/passwordPlugin.js';
 
-const userSchema = mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true, immutable: true },
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, immutable: true, lowercase: true, trim: true },
     password: { type: String, required: true },
-    address: {type: String},
-    mobile: {type: String},
+    address: { type: String },
+    mobile: { type: String },
     profilePic: { type: String },
     isActive: { type: Boolean, default: true },
-    // isDisabled: { type: Boolean, default: false },
-    role: { type: String,enum: ['user'], default: 'user' },
-    likedProducts: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product"
-    }],
-    
+    // false until the sign-up code is confirmed. No default on purpose: accounts created before email
+    // confirmation existed have no value and count as confirmed (only an explicit false blocks login).
+    emailVerified: { type: Boolean },
+    role: { type: String, enum: ['user'], default: 'user' },
+    likedProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-// password hasshing before saving
-userSchema.pre("save", async function (next) {
-  try{
-  if (!this.isModified('password')) return next();
-
-  // this.password = bcrypt.hash(this.password, 10);
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-} catch (error) {
-  next(error);
-}
-});
-userSchema.methods.comparePassword  = async function (enteredPassword) {
-  try{
-  return await bcrypt.compare(enteredPassword, this.password);
-} catch (error) {
-  throw new Error('Password comparison failed');
-}
-};
-
+userSchema.plugin(passwordPlugin);
 
 const User = mongoose.model('User', userSchema);
 export default User;

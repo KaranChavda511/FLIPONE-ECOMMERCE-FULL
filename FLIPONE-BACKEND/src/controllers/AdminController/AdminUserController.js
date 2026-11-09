@@ -1,81 +1,37 @@
-// User Management (by Admin)
-// getAllUsers, toggleUserStatus
-
+// User management (by admin)
 import User from '../../models/User.js';
+import { HttpError, searchRegex, isValidId } from '../../utils/helpers.js';
 import logger from '../../services/logger.js';
 
-const adminUserLogger = logger.child({ label: "/AdminController/AdminUserController.js" });
+const adminUserLogger = logger.child({ label: 'controllers/AdminUserController.js' });
 
 export const getAllUsers = async (req, res) => {
-  try {
-    const { search } = req.query;
-    
-    
-    if (search) {
-      adminUserLogger.info(`Searching users with query: ${search}`);
-    }
+  const { search } = req.query;
+  const query = search
+    ? { $or: [{ name: searchRegex(search) }, { email: searchRegex(search) }] }
+    : {};
 
-    const query = search ? {
-      $or: [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
-      ]
-    } : {};
+  // password is select:false on the model, so hashes are no longer sent to the browser.
+  const users = await User.find(query).select('-likedProducts').sort('-createdAt').lean();
 
-    const users = await User.find(query);
-    const count = await User.countDocuments(query);
+  res.json({ success: true, total: users.length, users });
+};
 
-    adminUserLogger.info(`Fetched ${users.length} of ${count} total users`);
-
-    res.json({
-      success: true,
-      users
-    });
-
-  } catch (error) {
-    adminUserLogger.error(`Get Users Error: ${error.message}`, {
-      stack: error.stack,
-      query: req.query
-    });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch users'
-    });
-  }
+export const getUserById = async (req, res) => {
+  if (!isValidId(req.params.id)) throw new HttpError(400, 'Invalid user id');
+  const user = await User.findById(req.params.id).lean();
+  if (!user) throw new HttpError(404, 'User not found');
+  res.json({ success: true, user });
 };
 
 export const toggleUserStatus = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) {
-      adminUserLogger.warn(`User not found with ID: ${req.params.id}`);
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+  if (!isValidId(req.params.id)) throw new HttpError(400, 'Invalid user id');
+  const user = await User.findById(req.params.id);
+  if (!user) throw new HttpError(404, 'User not found');
 
-    const newStatus = !user.isActive;
-    adminUserLogger.info(`Toggling user status for ${user._id} from ${user.isActive} to ${newStatus}`);
+  user.isActive = !user.isActive;
+  await user.save();
+  adminUserLogger.info(`User ${user._id} ${user.isActive ? 'activated' : 'deactivated'} by ${req.account._id}`);
 
-    user.isActive = newStatus;
-    await user.save();
-
-    adminUserLogger.info(`Successfully ${newStatus ? 'activated' : 'deactivated'} user ${user._id}`);
-    res.json({
-      success: true,
-      message: `User ${user.isActive ? 'activated' : 'deactivated'}`
-    });
-
-  } catch (error) {
-    adminUserLogger.error(`Toggle User Status Error: ${error.message}`, {
-      stack: error.stack,
-      userId: req.params.id
-    });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update user status'
-    });
-  }
+  res.json({ success: true, message: `User ${user.isActive ? 'activated' : 'deactivated'}`, isActive: user.isActive });
 };
-

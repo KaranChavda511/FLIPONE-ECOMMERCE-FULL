@@ -1,73 +1,40 @@
-// src/routes/SellerRoutes/SellerRoutes.js
 import express from 'express';
 import { protect, sellerProtect } from '../../middlewares/AuthMiddleware.js';
-import {  sellerSignup, sellerLogin } from '../../controllers/SellerController/SellerController.js'
-import { 
+import { authLimiter } from '../../middlewares/RateLimitMiddleware.js';
+import { validator } from '../../middlewares/ValidationMiddleware.js';
+import { productImageUpload } from '../../utils/FileUploads.js';
+import { sellerSignup, sellerLogin } from '../../controllers/SellerController/SellerController.js';
+import {
   addProduct,
   updateProduct,
   updateProductImages,
   deactivateProduct,
-  getSellerProducts
+  getSellerProducts,
+  getSellerProduct,
 } from '../../controllers/SellerController/SellerProductController.js';
-import {
-  getSellerOrders,
-  updateOrderStatus
-} from '../../controllers/SellerController/sellerOrderController.js';
-import { productImageUpload } from '../../utils/FileUploads.js';
-import { errorHandler } from '../../middlewares/ErrorMiddleware.js'
-import {validator} from '../../middlewares/ValidationMiddleware.js'
-
-
+import { getSellerOrders, updateOrderStatus } from '../../controllers/SellerController/sellerOrderController.js';
+import { getSellerAnalytics } from '../../controllers/SellerController/SellerAnalyticsController.js';
 
 const router = express.Router();
 
+router.post('/signup', authLimiter, validator('sellerSchemas.signup'), sellerSignup);
+router.post('/login', authLimiter, validator('sellerSchemas.login'), sellerLogin);
 
-// Seller Signup
-router.post(
-  "/signup",
-  validator("sellerSchemas.signup"),
-  sellerSignup
-);
+router.use(protect, sellerProtect);
 
-// Seller Login
-router.post(
-  "/login",
-  validator("sellerSchemas.login"),
-  sellerLogin
-);
+// Products. multer runs before the validator so multipart text fields are in req.body.
+router.get('/products', getSellerProducts);
+router.get('/products/:id', getSellerProduct);
+router.post('/add-product', productImageUpload, validator('productSchemas.create'), addProduct);
+router.patch('/products/:id', productImageUpload, validator('productSchemas.update'), updateProduct);
+router.patch('/products/:id/images', productImageUpload, updateProductImages);
+router.delete('/products/:id', deactivateProduct);
 
+// Analytics (own items only)
+router.get('/analytics', getSellerAnalytics);
 
-// Product Routes
-router.get('/products',protect, sellerProtect, getSellerProducts);
-
-router.post('/add-product', 
-  protect, sellerProtect,
-  productImageUpload, 
-  // validator("productSchemas.create"),
-  addProduct,
-  // errorHandler ,  
-);
-
-router.patch('/products/:id', 
-  protect, sellerProtect,
-  productImageUpload,
-  validator("productSchemas.update"),
-  updateProduct,
-  errorHandler
-);
-
-router.patch('/images',
-  protect, sellerProtect,
-  // errorHandler, 
-  productImageUpload,
-  updateProductImages
-);
-
-router.delete('/products/:id',protect, sellerProtect, deactivateProduct);
-
-
-// Order Routes
-router.get('/allOrders',protect, sellerProtect, getSellerOrders);
-router.patch('/orders/:orderId/items/:itemId',protect, sellerProtect, updateOrderStatus);
+// Orders
+router.get('/allOrders', getSellerOrders);
+router.patch('/orders/:orderId/items/:itemId', validator('sellerOrderSchemas.updateStatus'), updateOrderStatus);
 
 export default router;

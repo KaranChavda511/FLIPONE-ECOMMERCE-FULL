@@ -1,78 +1,44 @@
-  import express from 'express';
-  import path from 'path';
-  import dotenv from "dotenv";
-  import morgan from 'morgan';
-  import cors from 'cors'; 
-  import connectDB from './src/config/db.js';
-  import centralizedRoute from './src/routes/CentralizedRoute.js';
-  import logger from './src/services/logger.js';
-  import { errorHandler, notFound } from "./src/middlewares/ErrorMiddleware.js";
+// server.js — entry point. Env vars come from `node --env-file-if-exists=.env` (see package.json), no dotenv.
+import mongoose from 'mongoose';
+import app from './src/app.js';
+import connectDB from './src/config/db.js';
+import logger from './src/services/logger.js';
+import { assertMailConfig } from './src/services/mailer.js';
 
-  dotenv.config();
+const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET'];
+const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
+if (missing.length) {
+  logger.error(`Missing required env vars: ${missing.join(', ')}. Copy .env.example to .env and fill them in.`);
+  process.exit(1);
+}
 
-  const app = express();
+try {
+  assertMailConfig();
+} catch (error) {
+  logger.error(`${error.message}. See "Email" in .env.example.`);
+  process.exit(1);
+}
 
-  // Set static folder
-  const __dirname = path.resolve();
+const port = Number(process.env.PORT) || 5000;
 
-  // Serve static files from public directory
-  app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+try {
+  await connectDB();
+} catch {
+  process.exit(1);
+}
 
-  //  Enable CORS for frontend (Vite)
-  app.use(cors({
-    origin: "http://localhost:5173", // Allow requests from your frontend
-    credentials: true,               // Allow cookies/auth headers if needed
-  }));
+const server = app.listen(port, () => {
+  logger.info(`Server is running at port: ${port}`);
+});
 
-  // Body parsing middleware
-  app.use(express.json({ limit: '10kb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-
-  // Special middleware for multipart/form-data routes
-  app.use((req, res, next) => {
-    if (req.originalUrl.startsWith('/api/seller')) {
-      next(); // skip body parser for file uploads
-    } else {
-      express.json()(req, res, next);
-    }
+// Finish in-flight requests and close the DB pool on Ctrl+C / container stop.
+const shutdown = (signal) => {
+  logger.info(`${signal} received, shutting down`);
+  server.close(async () => {
+    await mongoose.connection.close();
+    process.exit(0);
   });
-
-  // Logging middleware using Winston
-  app.use((req, res, next) => {
-    logger.info(`Incoming Request: ${req.method} ${req.url}`, {
-      user: req.user?._id || 'Guest'
-    });
-    next();
-  });
-
-  // Morgan logging in dev
-  if (process.env.NODE_ENV === "development") {
-    app.use(morgan('dev', {
-      stream: {
-        write: (message) => logger.info(message.trim())
-      }
-    }));
-  }
-
-  // Routes
-  app.use('/api', centralizedRoute);
-
-  // Error handling middleware
-  app.use(notFound);
-  app.use(errorHandler);
-
-  // Connect to DB and start server
-  connectDB()
-    .then(() => {
-      app.on("error", (error) => {
-        console.log("ERROR", error);
-        throw error;
-      });
-
-      app.listen(process.env.PORT || 5000, () => {
-        console.log(`Server is running at port: ${process.env.PORT || 5000}`);
-      });
-    })
-    .catch((err) => {
-      console.log("Mongodb connection failed", err);
-    });
+  setTimeout(() => process.exit(1), 10_000).unref();
+};
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

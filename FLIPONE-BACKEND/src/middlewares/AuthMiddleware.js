@@ -1,127 +1,51 @@
-// src/middlewares/AuthMiddleware.js
-import jwt from "jsonwebtoken";
-import logger from "../services/logger.js";
-import User from "../models/User.js";
-import Seller from "../models/Seller.js";
-import Admin from "../models/Admin.js";
+import logger from '../services/logger.js';
+import User from '../models/User.js';
+import Seller from '../models/Seller.js';
+import Admin from '../models/Admin.js';
+import { verifyToken } from '../utils/generateToken.js';
 
-const authMiddlewareLogger = logger.child({
-  label: ".src/middlewares/AuthMiddleware.js",
-});
+const authLogger = logger.child({ label: 'middlewares/AuthMiddleware.js' });
 
+const MODEL_BY_ROLE = { user: User, seller: Seller, admin: Admin };
 
+const deny = (res, status, message) => res.status(status).json({ success: false, message });
 
-// Main authentication middleware (for all account types)
+// Authenticates any account type and attaches it as req.account.
 export const protect = async (req, res, next) => {
+  const header = req.headers.authorization;
+  const token = header?.startsWith('Bearer ') ? header.slice(7) : null;
 
-  const getToken = () => {
-    const authHeader = req.headers.authorization;
-    return authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
-  };
-  
+  if (!token) return deny(res, 401, 'Authorization failed; Please log in to Access.');
+
+  let decoded;
   try {
-    const token = getToken();
+    decoded = verifyToken(token);
+  } catch (error) {
+    authLogger.warn(`Token rejected: ${error.message}`);
+    return deny(res, 401, 'Session expired. Please log in again');
+  }
 
+  const Model = MODEL_BY_ROLE[decoded.role];
+  if (!Model) return deny(res, 401, 'Invalid account type');
 
-    if (!token) {
-      authMiddlewareLogger.warn("No token provided");
-      return res.status(401).json({
-        success: false,
-        message: "Authorization failed; Please log in to Access.",
-      });
-    }
-
-    // verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // console.log(decoded) // for debugging
-
-  
-
-    // Find user based on role
-    let account;
-    switch (decoded.role) {
-      case "user":
-        account = await User.findById(decoded.id);
-        break;
-      case "seller":
-        account = await Seller.findById(decoded.id);
-        break;
-      case "admin":
-        account = await Admin.findById(decoded.id);
-        break;
-      default:
-        authMiddlewareLogger.error(`Invalid role detected: ${decoded.role}`);
-        return res.status(401).json({
-          success: false,
-          message: "Invalid account type",
-        });
-    }
-
-     // Validate account status
-     if (!account?.isActive) {
-      authMiddlewareLogger.warn(`Account inactive or not found: ${decoded.id}`);
-      return res.status(401).json({
-        success: false,
-        message: "Account unavailable or inactive",
-      });
-    }
-
-    // Attach account to request
+  try {
+    const account = await Model.findById(decoded.id);
+    if (!account?.isActive) return deny(res, 401, 'Account unavailable or inactive');
     req.account = account;
-
-    authMiddlewareLogger.info(
-      `Authenticated ${decoded.role}: ${account.email}`
-    );
-
     next();
   } catch (error) {
-    authMiddlewareLogger.error(`Authentication failed: ${error.message}`);
-
-    return res.status(401).json({
-      success: false,
-      message: "Session expired. Please log in again",
-    });
+    next(error);
   }
 };
 
-// Admin-specific protection
-export const adminProtect = (req, res, next) => {
-  if (req.account.role !== "admin") {
-    authMiddlewareLogger.warn(
-      `Unauthorized admin access attempt by ${req.account.role}`
-    );
-    return res.status(403).json({
-      success: false,
-      message: "Admin access only",
-    });
+const requireRole = (role, message) => (req, res, next) => {
+  if (req.account?.role !== role) {
+    authLogger.warn(`Forbidden: ${req.account?.role} tried a ${role}-only route ${req.method} ${req.originalUrl}`);
+    return deny(res, 403, message);
   }
   next();
 };
 
-// Seller-specific protection
-export const sellerProtect = (req, res, next) => {
-  if (req.account.role !== "seller") {
-    authMiddlewareLogger.warn(
-      `Unauthorized seller access attempt by ${req.account.role}`
-    );
-    return res.status(403).json({
-      success: false,
-      message: "Seller account required",
-    });
-  }
-  next();
-};
-
-// User-specific protection
-export const userProtect = (req, res, next) => {
-  if (req.account.role !== "user") {
-    authMiddlewareLogger.warn(
-      `Unauthorized user access attempt by ${req.account.role}`
-    );
-    return res.status(403).json({
-      success: false,
-      message: "User account required",
-    });
-  }
-  next();
-};
+export const adminProtect = requireRole('admin', 'Admin access only');
+export const sellerProtect = requireRole('seller', 'Seller account required');
+export const userProtect = requireRole('user', 'User account required');

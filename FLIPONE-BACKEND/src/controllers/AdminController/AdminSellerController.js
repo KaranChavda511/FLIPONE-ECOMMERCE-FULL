@@ -1,101 +1,43 @@
-// Seller Management (by Admin)
-// getAllSellers, toggleSellerStatus
+// Seller management (by admin)
+import Seller from '../../models/Seller.js';
+import Product from '../../models/Product.js';
+import { HttpError, searchRegex, isValidId, parsePagination } from '../../utils/helpers.js';
+import logger from '../../services/logger.js';
 
-import Seller from "../../models/Seller.js";
-import logger from "../../services/logger.js";
-
-const adminSellerLogger = logger.child({
-  label: "/AdminController/AdminSellerController.js",
-});
+const adminSellerLogger = logger.child({ label: 'controllers/AdminSellerController.js' });
 
 export const getAllSellers = async (req, res) => {
-  try {
-    const { search } = req.query;
+  const { search } = req.query;
+  const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 10 });
+  const query = search
+    ? { $or: [{ name: searchRegex(search) }, { email: searchRegex(search) }, { licenseID: searchRegex(search) }] }
+    : {};
 
-    // Log the search attempt
-    if (search) {
-      adminSellerLogger.info(`Searching sellers with query: ${search}`);
-    }
+  const [sellers, total] = await Promise.all([
+    Seller.find(query).sort('-createdAt').skip(skip).limit(limit).lean(),
+    Seller.countDocuments(query),
+  ]);
 
-    const query = search
-      ? {
-          $or: [
-            { name: { $regex: search, $options: "i" } },
-            { email: { $regex: search, $options: "i" } },
-            { licenseID: { $regex: search, $options: "i" } },
-          ],
-        }
-      : {};
-
-    const sellers = await Seller.find(query);
-    const count = await Seller.countDocuments(query);
-
-    adminSellerLogger.info(
-      `Fetched ${sellers.length} of ${count} total sellers`
-    );
-
-    res.json({
-      success: true,
-      count,
-      sellers,
-    });
-  } catch (error) {
-    adminSellerLogger.error(`Get Sellers Error: ${error.message}`, {
-      stack: error.stack,
-      query: req.query,
-    });
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch sellers",
-    });
-  }
+  res.json({ success: true, count: sellers.length, total, page, totalPages: Math.ceil(total / limit), sellers });
 };
 
 export const toggleSellerStatus = async (req, res) => {
-  try {
-    const seller = await Seller.findById(req.params.id);
-    if (!seller) {
-      adminSellerLogger.warn(`Seller not found with ID: ${req.params.id}`);
+  if (!isValidId(req.params.id)) throw new HttpError(400, 'Invalid seller id');
+  const seller = await Seller.findById(req.params.id);
+  if (!seller) throw new HttpError(404, 'Seller not found');
 
-      return res.status(401).json({
-        success: false,
-        message: "Seller not found",
-      });
-    }
+  seller.isActive = !seller.isActive;
+  await seller.save();
 
-    // seller.isActive = !seller.isActive;
-    const newStatus = !seller.isActive;
-    adminSellerLogger.info(
-      `Toggling seller status for ${seller._id} from ${seller.isActive} to ${newStatus}`
-    );
-    seller.isActive = newStatus;
-    await seller.save();
-
-    // Deactivate all products if seller is deactivated
-    if (!seller.isActive) {
-      await Seller.updateMany({ seller: seller._id }, { isActive: false });
-      adminSellerLogger.info(
-        `Deactivated ${result.modifiedCount} products for seller ${seller._id}`
-      );
-    }
-
-    adminSellerLogger.info(
-      `Successfully ${newStatus ? "activated" : "deactivated"} seller ${
-        seller._id
-      }`
-    );
-    res.json({
-      success: true,
-      message: `Seller ${seller.isActive ? "activated" : "deactivated"}`,
-    });
-  } catch (error) {
-    adminSellerLogger.error(`Toggle Seller Status Error: ${error.message}`, {
-      stack: error.stack,
-      sellerId: req.params.id,
-    });
-    res.status(500).json({
-      success: false,
-      message: "Failed to update seller status",
-    });
+  // Was Seller.updateMany(...) plus an undefined `result`: products were never hidden and the request crashed.
+  if (!seller.isActive) {
+    const { modifiedCount } = await Product.updateMany({ seller: seller._id, isActive: true }, { isActive: false });
+    adminSellerLogger.info(`Deactivated seller ${seller._id} and ${modifiedCount} of their products`);
   }
+
+  res.json({
+    success: true,
+    message: `Seller ${seller.isActive ? 'activated' : 'deactivated'}`,
+    isActive: seller.isActive,
+  });
 };

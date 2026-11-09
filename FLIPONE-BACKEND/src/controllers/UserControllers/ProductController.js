@@ -1,158 +1,76 @@
-// Product Browsing (for all users) and Product Management (for sellers).
-// getAllActiveProducts, searchProducts, getProductDetails
-
+// Public product browsing.
 import Category from '../../models/Category.js';
 import Product from '../../models/Product.js';
-import logger from '../../services/logger.js';
+import Seller from '../../models/Seller.js';
+import { HttpError, isValidId, parsePagination, searchRegex } from '../../utils/helpers.js';
 
-const productControllerLogger = logger.child({ label: '.controllers/ProductController/ProductController.js' });
+/** Products from deactivated sellers are hidden: filter by active seller ids in the query, not after fetching. */
+const activeSellerIds = () => Seller.find({ isActive: true }).distinct('_id');
 
-// Get Active Products
+const toNumber = (value) => {
+  const number = Number(value);
+  return value !== undefined && value !== '' && Number.isFinite(number) ? number : undefined;
+};
+
+// GET /api/product?category=&minPrice=&maxPrice=&page=&limit=  (also /api/admin/product-list)
 export const getAllActiveProducts = async (req, res) => {
-  try {
-    const { category, minPrice, maxPrice } = req.query;
+  const { category } = req.query;
+  const minPrice = toNumber(req.query.minPrice);
+  const maxPrice = toNumber(req.query.maxPrice);
+  const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
 
-    productControllerLogger.info(`Fetching active products`, {
-      category,
-      minPrice,
-      maxPrice
-    });
-
-    const query = {
-      isActive: true,
-      ...(category && { category }),
-      ...(minPrice && { price: { $gte: minPrice } }),
-      ...(maxPrice && { price: { $lte: maxPrice } })
-    };
-
-    const products = await Product.find(query)
-      .populate('seller', 'name licenseID isActive')
-      .populate('category', 'name');
-
-
-const filteredProducts = products.filter(
-  (p) => p.seller && p.seller.isActive
-);
-
-    const count = await Product.countDocuments(query);
-
-    productControllerLogger.info(`Fetched ${products.length} active products`);
-
-    res.json({
-      success: true,
-      products: filteredProducts
-    });
-
-  } catch (error) {
-    productControllerLogger.error(`Get Products Error: ${error.message}`, {
-      stack: error.stack,
-      query: req.query
-    });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch products'
-    });
+  const query = { isActive: true, seller: { $in: await activeSellerIds() } };
+  // Was { category }, which can't match the embedded {_id, name}, so the filter never worked.
+  // Exact name, any case: ?category=eyewear and ?category=Eyewear both match "Eyewear".
+  if (typeof category === 'string' && category.trim()) {
+    query['category.name'] = new RegExp(`^${RegExp.escape(category.trim())}$`, 'i');
   }
+  // Min and max used to overwrite each other.
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    query.price = {};
+    if (minPrice !== undefined) query.price.$gte = minPrice;
+    if (maxPrice !== undefined) query.price.$lte = maxPrice;
+  }
+
+  const [products, total] = await Promise.all([
+    Product.find(query).sort('-createdAt').skip(skip).limit(limit).populate('seller', 'name licenseID').lean(),
+    Product.countDocuments(query),
+  ]);
+
+  res.json({ success: true, total, page, totalPages: Math.ceil(total / limit), products });
 };
 
-// Search Products
 export const searchProducts = async (req, res) => {
-  try {
-    const { q } = req.query;
+  const { q } = req.query;
+  if (typeof q !== 'string' || !q.trim()) throw new HttpError(400, 'Search query required');
 
-    productControllerLogger.info(`Searching products with query: ${q}`);
+  const pattern = searchRegex(q);
+  const products = await Product.find({
+    isActive: true,
+    seller: { $in: await activeSellerIds() },
+    $or: [{ name: pattern }, { description: pattern }, { 'category.name': pattern }, { subcategories: pattern }],
+  })
+    .limit(100)
+    .populate('seller', 'name')
+    .lean();
 
-    if (!q) {
-      productControllerLogger.warn(`Search query missing`);
-      return res.status(400).json({
-        success: false,
-        message: 'Search query required'
-      });
-    }
-
-    const products = await Product.find({
-      isActive: true,
-      $or: [
-        { name: { $regex: q, $options: 'i' } },
-        { description: { $regex: q, $options: 'i' } },
-        { 'category.name': { $regex: q, $options: 'i' } },
-        { subcategories: { $regex: q, $options: 'i' } },
-        { 'seller.name': { $regex: q, $options: 'i' } }
-      ]
-    })
-      .populate('category', 'name')
-      .populate('seller', 'name isActive');
-
-
-      const filteredProducts = products.filter(
-        (p) => p.seller && p.seller.isActive
-      );
-
-    productControllerLogger.info(`Found ${filteredProducts.length} products matching query: ${q}`);
-
-    res.json({
-      success: true,
-      results: filteredProducts.length,
-      products: filteredProducts
-    });
-
-  } catch (error) {
-    productControllerLogger.error(`Search Error: ${error.message}`, {
-      stack: error.stack,
-      query: req.query
-    });
-    res.status(500).json({
-      success: false,
-      message: 'Search failed'
-    });
-  }
+  res.json({ success: true, results: products.length, products });
 };
 
-// Get Product Details by ID
 export const getProductDetails = async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
+  if (!isValidId(id)) throw new HttpError(400, 'Invalid product id');
 
-    productControllerLogger.info(`Fetching product details: ${id}`);
+  // isActive wasn't selected on the seller before, so every product came back 404.
+  const product = await Product.findById(id).populate('seller', 'name licenseID isActive').lean();
+  if (!product?.isActive || !product.seller?.isActive) throw new HttpError(404, 'Product not found');
 
-    const product = await Product.findById(id)
-      .populate('seller', 'name licenseID')
-      .populate('category', 'name subcategories');
-
-    if (!product?.isActive || !product?.seller || !product.seller.isActive) {
-      productControllerLogger.warn(`Product not found ,inactive or seller deactive: ${id}`);
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    productControllerLogger.info(`Product details fetched successfully: ${id}`);
-
-    res.json({
-      success: true,
-      product
-    });
-
-  } catch (error) {
-    productControllerLogger.error(`Product Details Error: ${error.message}`, {
-      stack: error.stack,
-      productId: req.params.id
-    });
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch product details'
-    });
-  }
+  const { isActive: _sellerActive, ...seller } = product.seller;
+  res.json({ success: true, product: { ...product, seller } });
 };
 
-
+// Kept as a bare array (the frontend expects that shape).
 export const getAllCategories = async (req, res) => {
-  try {
-    const categories = await Category.find();
-    res.json(categories);
-  } catch (error) {
-    console.log(error , ':error')
-    res.status(500).json({ error: error.message });
-  }
-}
+  const categories = await Category.find().select('name subcategories').sort('name').lean();
+  res.json(categories);
+};
